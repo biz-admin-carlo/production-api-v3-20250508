@@ -5,6 +5,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const http = require('http');
 const socketIO = require('socket.io');
+const bodyParser = require('body-parser');
 
 const errorHandler = require('./app/middlewares/errorHandler');
 const { generalLimiter } = require('./app/middlewares/rateLimiter');
@@ -46,7 +47,13 @@ const io = socketIO(server, {
 socketManager.setIO(io);
 
 // ───── Webhook (Stripe uses raw body, must be registered before express.json) ─────
-app.use('/api/v2/stripe', require('./app/webhooks/stripeWebhook'));
+const stripeWebhook = require('./app/webhooks/stripeWebhook');
+
+app.use(
+  '/api/v2/stripe/webhook',
+  bodyParser.raw({ type: 'application/json' }),
+  stripeWebhook
+);
 
 // ───── Middleware Setup ─────
 app.use(helmet());

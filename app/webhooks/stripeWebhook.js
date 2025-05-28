@@ -6,7 +6,7 @@ const socketManager = require('../utils/socketManager');
 const Customer = require('./CustomerModel');
 const Dispute = require('./DisputeModel');
 
-router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+router.post('/', async (req, res) => {
   const sig = req.headers['stripe-signature'];
   const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
   const io = socketManager.getIO();

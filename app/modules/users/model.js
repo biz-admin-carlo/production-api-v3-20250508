@@ -40,7 +40,7 @@ const userSchema = new mongoose.Schema({
   },
   userCode: {
     type: String,
-    enum: ['0', '11', '12', '21', '22', '31'],
+    enum: ['0', '11', '12', '21', '22', '23', '31'],
     default: '11',
     required: true
   }  
