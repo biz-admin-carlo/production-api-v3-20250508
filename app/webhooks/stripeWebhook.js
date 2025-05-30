@@ -20,7 +20,7 @@ router.post('/', async (req, res) => {
   }
 
   switch (event.type) {
-    case 'charge.succeeded':
+    case 'charge.succeeded': {
       const paymentData = event.data.object;
 
       const paymentInfo = {
@@ -47,19 +47,25 @@ router.post('/', async (req, res) => {
         eventType: event.type
       };
 
+      const existing = await Customer.findOne({ 'paymentDetails.chargeId': paymentData.id });
+
+      if (!existing) {
+        await new Customer({
+          name: paymentData.billing_details?.name || 'Unknown',
+          email: paymentData.receipt_email,
+          paymentDetails: paymentInfo
+        }).save();
+      } else {
+        console.log(`⚠️ Duplicate charge skipped: ${paymentData.id}`);
+      }
+
       // Emit via WebSocket
       io.emit('payment-success', paymentInfo);
 
-      // Save to DB
-      await new Customer({
-        name: paymentData.billing_details?.name || 'Unknown',
-        email: paymentData.receipt_email,
-        paymentDetails: paymentInfo
-      }).save();
-
       return res.status(200).send('Charge success received');
+    }
 
-    case 'charge.dispute.created':
+    case 'charge.dispute.created': {
       const dispute = event.data.object;
 
       const disputeInfo = {
@@ -75,10 +81,10 @@ router.post('/', async (req, res) => {
       };
 
       io.emit('dispute-created', disputeInfo);
-
       await new Dispute(disputeInfo).save();
 
       return res.status(200).send('Dispute created received');
+    }
 
     default:
       console.log(`Unhandled event type: ${event.type}`);
