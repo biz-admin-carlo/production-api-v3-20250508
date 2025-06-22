@@ -21,8 +21,8 @@ const getSingleListing = async (req, res, next) => {
     const listing = await fetchListingById(ID);
     res.status(200).json({
       success: true,
-      data: listing,
       timestamp: new Date().toISOString(),
+      data: listing,
     });
   } catch (err) {
     next(err);
