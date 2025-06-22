@@ -8,6 +8,7 @@ const accountRoutes = require('./modules/accounts/routes');
 const internalRoutes = require('./modules/internal/routes');
 const logsRoutes = require('./modules/logs/routes');
 const notificationRoutes = require('./modules/notifications/routes');
+const externalRoutes = require('./modules/external/routes');
 
 router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
@@ -16,5 +17,6 @@ router.use('/accounts', accountRoutes);
 router.use('/internal', internalRoutes);
 router.use('/logs', logsRoutes);
 router.use('/notifications', notificationRoutes);
+router.use('/external', externalRoutes);
 
 module.exports = router;
