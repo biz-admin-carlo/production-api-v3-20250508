@@ -17,7 +17,7 @@ dotenv.config();
 
 const app = express();
 
-const allowedOrigins = ['http://localhost:3000', 'https://mybizsolutions.us', 'https://debbiebergeronrealestate.com'];
+const allowedOrigins = ['http://localhost:3000', 'https://mybizsolutions.us', 'https://debbiebergeronrealestate.com', 'https://debbiebergeronrealestate.com/home'];
 
 app.use(cors({
   origin: function (origin, callback) {
