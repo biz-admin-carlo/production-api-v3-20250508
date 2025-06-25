@@ -85,6 +85,9 @@ app.get('/', (req, res) => {
 // ───── Error Handler ─────
 app.use(errorHandler);
 
+// Trust first proxy only
+app.set('trust proxy', 1);
+
 // ───── MongoDB Connection ─────
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('✅ MongoDB connected'))
