@@ -1,0 +1,24 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model SubscriberPaymentInfo {
+  id                    Int      @id @default(autoincrement())
+  referenceId         String   @unique @default(uuid())
+  userId                String
+  email                 String?
+  phone                 String?
+  country               String?
+  address               String?
+  cvcEncrypted          String   
+  expirationEncrypted   String   
+  cardEncrypted         String   
+  maskedCardNumber      String   
+  maskedExpirationYear  String   
+  createdAt             DateTime @default(now())
+}
