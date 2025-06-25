@@ -23,16 +23,15 @@ const createBillingDetails = async (req, res, next) => {
 
     const superEmails = superAccounts.map(u => u.email);
 
-    await sendMail({
-      to: [ userEmail, ...superEmails ],
-      subject: `🔒 Your Billing Details Added`,
-      html
-    });
+    // await sendMail({
+    //   to: [ userEmail, ...superEmails ],
+    //   subject: `🔒 Your Billing Details Added`,
+    //   html
+    // });
 
     return res.status(201).json({
       success: true,
       data: {
-        id:           saved.id,
         referenceId:  saved.referenceId,
         createdAt:    saved.createdAt
       }

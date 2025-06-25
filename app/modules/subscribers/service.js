@@ -9,7 +9,8 @@ async function registerBillingDetails(userId, input) {
     expirationDate, // e.g. "08/2025"
     cvc,
     country,
-    address
+    address,
+    fullName
   } = input;
 
   // mask only last 4 digits
@@ -23,6 +24,7 @@ async function registerBillingDetails(userId, input) {
       phone,
       country,
       address,
+      fullName,
       cvcEncrypted        : encryptRSA(cvc),
       expirationEncrypted : encryptRSA(expirationDate),
       cardEncrypted       : encryptRSA(cardNumber),
@@ -39,14 +41,14 @@ async function getBillingDetailsByUser(userId) {
     orderBy: { createdAt: 'desc' },
     take: 1,
     select: {
-      id: true,
       email: true,
       phone: true,
       country: true,
       address: true,
       maskedCardNumber: true,
       maskedExpirationYear: true,
-      createdAt: true
+      createdAt: true,
+      fullName: true,
     }
   });
   return latest;
