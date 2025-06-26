@@ -17,22 +17,36 @@ const createBillingDetails = async (req, res, next) => {
       cardLast4
     });
 
-    const superAccounts = await User.find({ userCode: '0' })
-    .select('email -_id')
-    .lean();
-
-    const superEmails = superAccounts.map(u => u.email);
-
     await sendMail({
-      to: [ userEmail, ...superEmails ],
-      subject: `🔒 Your Billing Details Added`,
+      to: [ userEmail ],
+      subject: `Successful Billing Details Added`,
       html
     });
+
+    const superUsers = await User
+    .find({ userCode: { $in: ['0','22'] } })
+    .select('email')
+    .lean();
+  
+    const superEmails = superUsers.map(u => u.email);
+
+    if (superEmails.length) {
+      const adminHtml = getBillingNotificationHtml({
+        fullName,
+        referenceId: saved.referenceId,
+        submittedAt: saved.createdAt,
+        cardLast4
+      });
+      await sendMail({
+        to: superEmails,
+        subject: `${fullName} Added/Updated Billing Details`,
+        html: adminHtml
+      });
+    }
 
     return res.status(201).json({
       success: true,
       data: {
-        id:           saved.id,
         referenceId:  saved.referenceId,
         createdAt:    saved.createdAt
       }

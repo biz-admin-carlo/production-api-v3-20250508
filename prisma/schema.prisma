@@ -20,5 +20,6 @@ model SubscriberPaymentInfo {
   cardEncrypted         String   
   maskedCardNumber      String   
   maskedExpirationYear  String   
+  fullName              String?
   createdAt             DateTime @default(now())
 }
