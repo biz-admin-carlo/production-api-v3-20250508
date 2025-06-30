@@ -1,5 +1,8 @@
-const { fetchInitialListings, fetchListingById } = require('./service');
-const AppError = require('../../utils/AppError');
+const {
+  fetchInitialListings,
+  fetchListingById,
+  fetchSearchListings,
+} = require('./service');
 
 const getClientInitialListings = async (req, res, next) => {
   try {
@@ -29,4 +32,21 @@ const getSingleListing = async (req, res, next) => {
   }
 };
 
-module.exports = { getClientInitialListings, getSingleListing };
+const searchListings = async (req, res, next) => {
+  const mode = req.query.mode === 'lease' ? 'lease' : 'sale';
+  const term = (req.query.query || '').trim();
+
+  try {
+    const results = await fetchSearchListings({ mode, term });
+    res.status(200).json({
+      success: true,
+      timestamp: new Date().toISOString(),
+      count: results.length,
+      data: results,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { getClientInitialListings, getSingleListing, searchListings };
