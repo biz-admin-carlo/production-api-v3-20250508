@@ -79,16 +79,19 @@ const fetchListingById = async (propertyId) => {
   }
 };
 
-const fetchSearchListings = async ({ mode = 'sale', term = '' }) => {
-  const propertyType =
-    mode === 'lease' ? 'Residential Lease' : 'Residential';
+const fetchSearchListings = async ({ mode = 'buying', term = '' }) => {
+  const propertyType = 'Residential';
+  const statusClause =
+    mode === 'selling'
+      ? " and StandardStatus eq 'Closed'"
+      : " and StandardStatus eq 'Active'";
 
   const baseUrl =
     `https://api.mlsgrid.com/v2/Property` +
     `?$filter=OriginatingSystemName eq 'mfrmls'` +
     ` and ListOfficeMlsId eq '${OFFICE_ID}'` +
     ` and PropertyType eq '${propertyType}'` +
-    ` and StandardStatus eq 'Active'` +
+    statusClause +
     ` and MlgCanView eq true` +
     `&$expand=Media`;
 
