@@ -9,6 +9,8 @@ const BASE_HEADERS = {
 
 const OFFICE_ID = 'MFR55171C';
 
+const MAX_RESULTS = 30;
+
 const fetchInitialListings = async () => {
   const baseUrl =
     `https://api.mlsgrid.com/v2/Property` +
@@ -89,44 +91,44 @@ const fetchSearchListings = async ({ mode = 'buying', term = '' }) => {
   const baseUrl =
     `https://api.mlsgrid.com/v2/Property` +
     `?$filter=OriginatingSystemName eq 'mfrmls'` +
-    ` and ListOfficeMlsId eq '${OFFICE_ID}'` +
     ` and PropertyType eq '${propertyType}'` +
     statusClause +
     ` and MlgCanView eq true` +
-    `&$expand=Media`;
+    `&$expand=Media` +                    // photos
+    `&$top=1000`;                         // server page size
 
-  let listings = [];
+  const needle = term.toLowerCase();
+  let results = [];
   let nextUrl = baseUrl;
 
   try {
-    while (nextUrl) {
+    while (nextUrl && results.length < MAX_RESULTS) {
       const { data } = await axios.get(nextUrl, { headers: BASE_HEADERS });
-      listings.push(...data.value);
+
+      const matches = data.value.filter((l) => {
+        if (!needle) return true;
+        return (
+          (l.City || '').toLowerCase().includes(needle) ||
+          (l.PostalCode || '').toLowerCase().includes(needle) ||
+          (l.UnparsedAddress || '').toLowerCase().includes(needle)
+        );
+      });
+
+      results.push(...matches);
       nextUrl = data['@odata.nextLink'] || null;
     }
 
-    const query = term.toLowerCase();
-
-    const filtered = listings.filter((l) => {
-      if (!query) return true;
-      return (
-        (l.City || '').toLowerCase().includes(query) ||
-        (l.PostalCode || '').toLowerCase().includes(query) ||
-        (l.UnparsedAddress || '').toLowerCase().includes(query)
-      );
-    });
-
-    return filtered.map((l) => ({
-      city: l.City || '',
-      address: l.UnparsedAddress || '',
-      bedrooms: l.BedroomsTotal || 0,
-      bathrooms: l.BathroomsTotalInteger || 0,
-      sqft: l.LivingArea || 0,
-      listingId: (l.ListingId || '').replace(/^MFR/, ''),
-      price: l.ListPrice || 0,
-      image: l.Media?.[0]?.MediaURL || '',
-      agent: l.ListAgentFullName,
-      status: l.StandardStatus,
+    return results.slice(0, MAX_RESULTS).map((l) => ({
+      city:       l.City || '',
+      address:    l.UnparsedAddress || '',
+      bedrooms:   l.BedroomsTotal || 0,
+      bathrooms:  l.BathroomsTotalInteger || 0,
+      sqft:       l.LivingArea || 0,
+      listingId:  (l.ListingId || '').replace(/^MFR/, ''),
+      price:      l.ListPrice || 0,
+      image:      l.Media?.[0]?.MediaURL || '',
+      agent:      l.ListAgentFullName,
+      status:     l.StandardStatus,
     }));
   } catch (error) {
     console.error(
