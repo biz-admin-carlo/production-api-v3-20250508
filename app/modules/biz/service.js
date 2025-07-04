@@ -264,8 +264,22 @@ const getRecentFeaturedBiz = async () => {
 };
 
 const registerBizDetails = async (data) => {
-  return await prisma.businessDetails.create({ data })
+  const { bizId } = data
+  if (!bizId) throw new AppError('bizId is required', 400)
 
+  const last = await prisma.businessDetails.findFirst({
+    where: { bizId },
+    orderBy: { version: 'desc' },
+    select: { version: true }
+  })
+  const nextVersion = last ? last.version + 1 : 1
+
+  return await prisma.businessDetails.create({
+    data: {
+      ...data,
+      version: nextVersion
+    }
+  })
 };
 
 module.exports = {
