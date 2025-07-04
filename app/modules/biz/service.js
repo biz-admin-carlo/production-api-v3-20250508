@@ -1,3 +1,5 @@
+const { PrismaClient } = require('@prisma/client')
+const prisma = new PrismaClient()
 const Biz = require('./model');
 const yelpService = require('../../config.js/yelpServices');
 
@@ -261,13 +263,15 @@ const getRecentFeaturedBiz = async () => {
   }
 };
 
+const registerBizDetails = async (data) => {
+  return await prisma.businessDetails.create({ data })
 
-
-
+};
 
 module.exports = {
   getCombinedBusinessResults,
   getBusinessesByLatLong,
   findBizByName,
-  getRecentFeaturedBiz
+  getRecentFeaturedBiz,
+  registerBizDetails
 };
