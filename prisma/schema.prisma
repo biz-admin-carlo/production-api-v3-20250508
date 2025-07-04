@@ -23,3 +23,23 @@ model SubscriberPaymentInfo {
   fullName              String?
   createdAt             DateTime @default(now())
 }
+
+model BusinessDetails {
+  id              Int       @id @default(autoincrement())
+  bizId           String    @unique                      // tie back to your Mongo Biz._id
+  bizName         String
+  state           String
+  fullAddress     String
+  contactNumber   String
+  categories      String[]                            // e.g. ["Construction","Repair"]
+  servicesOffered String[]                            // e.g. ["Plumbing","Drains"]
+  keywords        String[]
+  description     String
+  emailAddress    String
+  otherWebsites   String[]                            // e.g. ["https://foo.com","https://bar.com"]
+  officeHours     String[]                            // e.g. ["Mon 8:00 AM - 5:00 PM","Sun Closed"]
+  images          String[]                            // your uploadBizImagesUrl array
+  iconUrl         String                              // uploadBizIconUrl
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}

@@ -1,4 +1,4 @@
-const { getCombinedBusinessResults, getBusinessesByLatLong, findBizByName, getRecentFeaturedBiz } = require('./service');
+const { getCombinedBusinessResults, getBusinessesByLatLong, findBizByName, getRecentFeaturedBiz, registerBizDetails } = require('./service');
 
 const searchByLocation = async (req, res, next) => {
   try {
@@ -85,4 +85,13 @@ const getFeaturedBiz = async (req, res, next) => {
   }
 };
 
-module.exports = { searchByLocation, searchByGeoCoordinates, getBizByName, getFeaturedBiz };
+const createBizDetails = async (req, res, next) => {
+  try {
+    const detail = await registerBizDetails(req.body)
+    res.status(201).json({ success: true, data: detail })
+  } catch (err) {
+    next(err)
+  }
+};
+
+module.exports = { searchByLocation, searchByGeoCoordinates, getBizByName, getFeaturedBiz, createBizDetails };

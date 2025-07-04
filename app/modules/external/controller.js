@@ -33,7 +33,9 @@ const getSingleListing = async (req, res, next) => {
 };
 
 const searchListings = async (req, res, next) => {
-  const mode = req.query.mode === 'lease' ? 'lease' : 'sale';
+  const mode = ['buying', 'selling'].includes(req.query.mode)
+              ? req.query.mode
+              : 'buying';
   const term = (req.query.query || '').trim();
 
   try {
