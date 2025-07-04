@@ -8,10 +8,6 @@ router.get('/category/location', generalLimiter, searchByLocation);
 router.get('/category/:latitude/:longitude', generalLimiter, searchByGeoCoordinates);
 router.get('/:bizName', generalLimiter, getBizByName);
 
-router.post(
-    '/details/',
-    generalLimiter,
-    createBizDetails
-)
+router.post('/details/', generalLimiter, createBizDetails);
   
 module.exports = router;

@@ -85,13 +85,36 @@ const getFeaturedBiz = async (req, res, next) => {
   }
 };
 
-const createBizDetails = async (req, res, next) => {
+async function createBizDetails(req, res, next) {
   try {
-    const detail = await registerBizDetails(req.body)
-    res.status(201).json({ success: true, data: detail })
+    const bizDetail = await registerBizDetails({
+      bizId: req.body.bizId,
+      bizName: req.body.bizName,
+      state: req.body.state,
+      fullAddress: req.body.fullAddress,
+      contactNumber: req.body.contactNumber,
+      categories: req.body.categories,
+      servicesOffered: req.body.servicesOffered,
+      keywords: req.body.keywords,
+      description: req.body.description,
+      emailAddress: req.body.emailAddress,
+      otherWebsites: req.body.otherWebsites,
+      officeHours: req.body.officeHours,
+      images: req.body.images,
+      iconUrl: req.body.iconUrl
+    })
+
+    res.status(201).json({
+      success: true,
+      data: {
+        id:          bizDetail.id,
+        version:     bizDetail.version,
+        createdAt:   bizDetail.createdAt
+      }
+    })
   } catch (err) {
     next(err)
   }
-};
+}
 
 module.exports = { searchByLocation, searchByGeoCoordinates, getBizByName, getFeaturedBiz, createBizDetails };
