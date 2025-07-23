@@ -1,4 +1,12 @@
-const { getCombinedBusinessResults, getBusinessesByLatLong, findBizByName, getRecentFeaturedBiz, registerBizDetails } = require('./service');
+const { 
+  getCombinedBusinessResults, 
+  getBusinessesByLatLong, 
+  findBizByNameUnified, 
+  getRecentFeaturedBiz, 
+  registerBizDetails,
+  saveBizIcon,
+  saveBizGallery
+} = require('./service');
 
 const searchByLocation = async (req, res, next) => {
   try {
@@ -48,19 +56,18 @@ const searchByGeoCoordinates = async (req, res, next) => {
 
 const getBizByName = async (req, res, next) => {
   try {
-    let { bizName } = req.params;
-
+    const { bizName } = req.params;
     if (!bizName) {
       return res.status(400).json({ success: false, message: 'Business name is required' });
     }
 
-    // Decode the URL and convert to title-case with symbols
-    const decoded = decodeURIComponent(bizName);
+    const decoded = decodeURIComponent(bizName).toLowerCase();
     const humanReadableName = decoded
-      .replace(/-/g, ' ')                        // Replace dashes with spaces
-      .replace(/\b\w/g, char => char.toUpperCase()); // Capitalize first letter of each word
+    .split('-')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
 
-    const business = await findBizByName(humanReadableName);
+    const business = await findBizByNameUnified(humanReadableName);
 
     if (!business) {
       return res.status(404).json({ success: false, message: 'No business found' });
@@ -90,31 +97,66 @@ async function createBizDetails(req, res, next) {
     const bizDetail = await registerBizDetails({
       bizId: req.body.bizId,
       bizName: req.body.bizName,
+      bizAlias: req.body.bizAlias || req.body.alias || '',
       state: req.body.state,
       fullAddress: req.body.fullAddress,
       contactNumber: req.body.contactNumber,
       categories: req.body.categories,
       servicesOffered: req.body.servicesOffered,
-      keywords: req.body.keywords,
+      keywords: req.body.keywords || [],
       description: req.body.description,
       emailAddress: req.body.emailAddress,
-      otherWebsites: req.body.otherWebsites,
+      otherWebsites: req.body.otherWebsites || [],
       officeHours: req.body.officeHours,
       images: req.body.images,
-      iconUrl: req.body.iconUrl
-    })
+      iconUrl: req.body.iconUrl,
+      latitude: req.body.latitude || null,
+      longitude: req.body.longitude || null
+    });
 
     res.status(201).json({
       success: true,
       data: {
-        id:          bizDetail.id,
-        version:     bizDetail.version,
-        createdAt:   bizDetail.createdAt
+        id:        bizDetail.id,
+        version:   bizDetail.version,
+        createdAt: bizDetail.createdAt
       }
-    })
+    });
   } catch (err) {
-    next(err)
+    next(err);
   }
 }
 
-module.exports = { searchByLocation, searchByGeoCoordinates, getBizByName, getFeaturedBiz, createBizDetails };
+const handleBizIconUpload = async (req, res) => {
+  try {
+    const { bizName } = req.query;
+    const imageUrl = req.file.location;
+    const result = await saveBizIcon(bizName, imageUrl);
+    res.status(200).json({ success: true, result });
+  } catch (err) {
+    console.error("Error in handleBizIconUpload:", err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const handleBizGalleryUpload = async (req, res) => {
+  try {
+    const { bizName } = req.query;
+    const imageUrls = req.files.map((file) => file.location);
+    const result = await saveBizGallery(bizName, imageUrls);
+    res.status(200).json({ success: true, result });
+  } catch (err) {
+    console.error("Error in handleBizGalleryUpload:", err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = { 
+  searchByLocation, 
+  searchByGeoCoordinates, 
+  getBizByName, 
+  getFeaturedBiz, 
+  createBizDetails,
+  handleBizIconUpload,
+  handleBizGalleryUpload
+};

@@ -95,7 +95,7 @@ const createUser = async (data) => {
     referredBy  = null
   } = data;
 
-  if (!firstName || !lastName || !email || !password || !birthday) {
+  if (!firstName || !lastName || !email || !password) {
     throw new AppError('Missing required fields', 400);
   }
 
@@ -104,11 +104,11 @@ const createUser = async (data) => {
   }
 
   const hashedPassword = await bcrypt.hash(password, 10);
-  const birth = new Date(birthday);
+  const birth = birthday ? new Date(birthday) : new Date();
   const month = String(birth.getMonth() + 1).padStart(2, '0');
   const day   = String(birth.getDate()).padStart(2, '0');
   const referralCode = `${firstName.toUpperCase()}-BIZ-${month}-${day}`;
-
+  
   const user = new User({
     firstName,
     lastName,

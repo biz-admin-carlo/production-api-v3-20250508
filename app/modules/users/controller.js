@@ -5,9 +5,12 @@ const {
   fetchAllUsers, 
   fetchUserById, 
   updateUserPassword,
-  fetchUserPayments
+  fetchUserPayments,
+  fetchSubscriptionDetails,
+  saveProfileImage
 } = require('./service');
 const AppError = require('../../utils/AppError');
+const { transformS3UrlToCDN } = require('../../utils/s3Uploader');
 
 const getAccountDetails = async (req, res, next) => {
   try {
@@ -114,6 +117,35 @@ const getPaymentHistory = async (req, res, next) => {
   }
 };
 
+const getSubscriptionDetails = async (req, res, next) => {
+  try {
+    const details = await fetchSubscriptionDetails(req.user.userId);
+    res.status(200).json({
+      success: true,
+      timestamp: new Date().toISOString(),
+      data: details,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const uploadProfileIcon = async (req, res, next) => {
+  try {
+    if (!req.file) throw new AppError('No image provided.', 400);
+
+    const cdnUrl = transformS3UrlToCDN(req.file.location);
+    
+    await saveProfileImage(req.user.userId, cdnUrl);
+
+    res.status(201).json({
+      success : true,
+      message : 'Profile image uploaded.',
+      data    : { url: cdnUrl }
+    });
+  } catch (err) { next(err); }
+};
+
 module.exports = {
   getAccountDetails,
   updateAccountDetails,
@@ -121,5 +153,7 @@ module.exports = {
   getAllUsers,
   getUserById,
   updatePassword,
-  getPaymentHistory
+  getPaymentHistory,
+  getSubscriptionDetails,
+  uploadProfileIcon,
 };
