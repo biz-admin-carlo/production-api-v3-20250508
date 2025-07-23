@@ -1,4 +1,5 @@
 const express = require('express');
+const morgan  = require('morgan');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const cors = require('cors');
@@ -10,7 +11,7 @@ const bodyParser = require('body-parser');
 const errorHandler = require('./app/middlewares/errorHandler');
 const { generalLimiter } = require('./app/middlewares/rateLimiter');
 const safeSanitize = require('./app/middlewares/safeSanitize');
-const mongoLogger = require('./app/middlewares/morganLogger');
+const morganLogger = require('./app/middlewares/morganLogger');
 const socketManager = require('./app/utils/socketManager');
 
 dotenv.config();
@@ -29,8 +30,13 @@ app.use(cors({
       callback(new Error("Not allowed by CORS"));
     }
   },
-  methods: "GET,POST,PUT,DELETE,OPTIONS",
-  allowedHeaders: "Content-Type,Authorization",
+  methods: 'GET,POST,PUT,DELETE,OPTIONS',
+  allowedHeaders: [
+         'Content-Type',
+         'Authorization',
+         'X-Latitude',
+          'X-Longitude',
+  ],
   credentials: true,
   optionsSuccessStatus: 204
 }));
@@ -60,11 +66,9 @@ app.use(
 app.use(helmet());
 app.use(safeSanitize);
 app.use(generalLimiter);
-app.use(cors());
+// app.use(cors());
 app.use(express.json());
-app.use(mongoLogger);
 
-// Attach client geo location from headers
 app.use((req, res, next) => {
   req.clientLocation = {
     latitude: req.headers['x-latitude'] || null,
@@ -72,6 +76,7 @@ app.use((req, res, next) => {
   };
   next();
 });
+app.use(morganLogger);
 
 // ───── API Routes ─────
 app.use('/api/v2', require('./app/router'));

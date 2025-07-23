@@ -6,14 +6,13 @@ async function registerBillingDetails(userId, input) {
     email,
     phone,
     cardNumber,
-    expirationDate, // e.g. "08/2025"
+    expirationDate,
     cvc,
     country,
     address,
     fullName
   } = input;
 
-  // mask only last 4 digits
   const maskedCardNumber     = '**** **** **** ' + cardNumber.slice(-4);
   const maskedExpirationYear = expirationDate.split('/')[1];
 
@@ -36,10 +35,9 @@ async function registerBillingDetails(userId, input) {
 }
 
 async function getBillingDetailsByUser(userId) {
-  const [latest] = await prisma.subscriberPaymentInfo.findMany({
+  return prisma.subscriberPaymentInfo.findFirst({
     where: { userId },
     orderBy: { createdAt: 'desc' },
-    take: 1,
     select: {
       email: true,
       phone: true,
@@ -49,9 +47,67 @@ async function getBillingDetailsByUser(userId) {
       maskedExpirationYear: true,
       createdAt: true,
       fullName: true,
-    }
+    },
   });
-  return latest;
 }
 
-module.exports = { registerBillingDetails, getBillingDetailsByUser };
+async function getAllBillingDetails() {
+  return prisma.subscriberPaymentInfo.findMany({
+    orderBy: { createdAt: 'desc' },
+    select: {
+      userId: true,
+      email: true,
+      phone: true,
+      country: true,
+      address: true,
+      fullName: true,
+      maskedCardNumber: true,
+      maskedExpirationYear: true,
+      createdAt: true,
+    },
+  });
+}
+
+async function getLatestBillingDetailsPerUser() {
+  // 1) Group to get max createdAt per user
+  const grouped = await prisma.subscriberPaymentInfo.groupBy({
+    by: ['userId'],
+    _max: { createdAt: true },
+  });
+
+  // 2) Fetch the actual rows that match each (userId, createdAt max)
+  // Build OR filters
+  const ors = grouped.map(g => ({
+    userId_createdAt: { userId: g.userId, createdAt: g._max.createdAt },
+  }));
+
+  if (!ors.length) return [];
+
+  const latestRows = await prisma.subscriberPaymentInfo.findMany({
+    where: { OR: ors.map(({ userId_createdAt }) => ({
+      userId: userId_createdAt.userId,
+      createdAt: userId_createdAt.createdAt,
+    }))},
+    select: {
+      userId: true,
+      email: true,
+      phone: true,
+      country: true,
+      address: true,
+      fullName: true,
+      maskedCardNumber: true,
+      maskedExpirationYear: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return latestRows;
+}
+
+module.exports = {
+  registerBillingDetails,
+  getBillingDetailsByUser,
+  getAllBillingDetails,
+  getLatestBillingDetailsPerUser,
+};
