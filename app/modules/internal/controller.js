@@ -1,5 +1,20 @@
-const { fetchAllUsers, updateUserCode, deactivateUser, fetchUserById, fetchAllBiz, fetchAllTransactions, fetchAllPayments, deletePaymentById, fetchAllDisputes } = require('./service');
+const { 
+  fetchAllUsers, 
+  updateUserCode, 
+  deactivateUser, 
+  fetchUserById, 
+  fetchAllBiz,
+  fetchAllTransactionsWithUserAndPayment,
+  fetchAllPayments, 
+  deletePaymentById, 
+  fetchAllDisputes,
+  fetchAllSubscriberBillingDetails,
+} = require('./service');
+const {
+  getBillingDetails
+} = require('../../modules/subscribers/service');
 const AppError = require('../../utils/AppError');
+const Customer = require('../../webhooks/CustomerModel');
 
 const getAllUsers = async (req, res, next) => {
   try {
@@ -102,11 +117,12 @@ const getAllPayments = async (req, res, next) => {
 
 const getAllTransactions = async (req, res, next) => {
   try {
-    const businesses = await fetchAllTransactions();
+    const businesses = await fetchAllTransactionsWithUserAndPayment();
+
     res.status(200).json({
       success: true,
       timestamp: new Date().toISOString(),
-      data: businesses
+      data: businesses,
     });
   } catch (err) {
     next(err);
@@ -147,4 +163,57 @@ const getCheckPayment = async (req, res, next) => {
   }
 };
 
-module.exports = { getAllUsers, updateAccountType, deleteUserAccount, getUserById, getAllBiz, getAllTransactions, getAllPayments, deletePayment, getAllDisputes, getCheckPayment };
+const getUpdatedCardDetails = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+
+    let data;
+
+    if (userId) {
+      // specific user latest
+      data = await getBillingDetails(userId);
+      console.log(data);
+      if (!data) {
+        return res.status(404).json({
+          success: false,
+          message: 'No billing details found for this user.',
+          timestamp: new Date().toISOString(),
+        });
+      }
+      return res.status(200).json({
+        success: true,
+        data,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    if (String(latestPerUser).toLowerCase() === 'true') {
+      data = await fetchAllLatestSubscriberBillingDetailsPerUser();
+    } else {
+      data = await fetchAllSubscriberBillingDetails(); // ALL rows
+    }
+
+    res.status(200).json({
+      success: true,
+      count: Array.isArray(data) ? data.length : 0,
+      data,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { 
+  getAllUsers, 
+  updateAccountType, 
+  deleteUserAccount, 
+  getUserById, 
+  getAllBiz, 
+  getAllTransactions, 
+  getAllPayments, 
+  deletePayment, 
+  getAllDisputes, 
+  getCheckPayment,
+  getUpdatedCardDetails
+};

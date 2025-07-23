@@ -2,6 +2,7 @@ const { PrismaClient } = require('@prisma/client')
 const prisma = new PrismaClient()
 const Biz = require('./model');
 const yelpService = require('../../config.js/yelpServices');
+const { transformS3UrlToCDN } = require("../../utils/s3Uploader");
 
 const getBizFromBizModel = async (state, category) => {
   const stateRegex = new RegExp(state, 'i');
@@ -246,6 +247,81 @@ const findBizByName = async (bizName) => {
   return found;
 };
 
+const normalizePostgresToMongoShape = (pgData) => {
+  return {
+    alias: pgData.bizAlias || '',
+    name: pgData.bizName,
+    email: pgData.emailAddress,
+    coordinates: {
+      type: 'Point',
+      coordinates: [pgData.longitude || 0, pgData.latitude || 0],
+    },
+    location: {
+      address1: pgData.fullAddress,
+      state: pgData.state,
+      display_address: [pgData.fullAddress],
+    },
+    phone: pgData.contactNumber,
+    display_phone: pgData.contactNumber,
+    categories: pgData.categories.map(cat => ({ alias: cat.toLowerCase(), title: cat })),
+    biz_images: pgData.images.map(img => ({ url: img, uploadedAt: new Date(), userId: null })),
+    isArchived: false,
+    is_closed: false,
+    rating: null,
+    review_count: 0,
+    url: '',
+    isBizDB: true,
+    bizStatus: 'active',
+    paymentStatus: 'active',
+    subscriptionName: '',
+    paymentGateway: '',
+    customerEmail: '',
+    amountTransacted: 0,
+    keywords: pgData.keywords,
+    description: pgData.description || '',
+    agentName: '',
+    agentId: '',
+    officeHours: pgData.officeHours || null,
+    servicesOffered: pgData.servicesOffered,
+    iconUrl: pgData.iconUrl,
+    userID: null,
+  };
+};
+
+const findBizByNameUnified = async (bizName) => {
+  const pgMatch = await prisma.businessDetails.findFirst({
+    where: {
+      OR: [
+        { bizAlias: bizName },
+        { bizName: { equals: bizName, mode: 'insensitive' } },
+      ],
+    },
+    orderBy: {
+      version: 'desc',
+    },
+  });
+
+  if (pgMatch) {
+    return normalizePostgresToMongoShape(pgMatch);
+  }
+
+  const nameRegex = new RegExp(bizName, 'i');
+
+  let mongoMatch = await Biz.findOne({
+    isArchived: false,
+    name: nameRegex,
+  }).lean();
+
+  if (!mongoMatch) {
+    mongoMatch = await Biz.findOne({
+      isArchived: false,
+      subscriptionName: { $exists: true, $ne: null },
+    }).sort({ createdAt: -1 }).lean();
+  }
+
+  return mongoMatch;
+};
+
 const getRecentFeaturedBiz = async () => {
   try {
     const businesses = await Biz.find({
@@ -264,22 +340,39 @@ const getRecentFeaturedBiz = async () => {
 };
 
 const registerBizDetails = async (data) => {
-  const { bizId } = data
-  if (!bizId) throw new AppError('bizId is required', 400)
+  const { bizId } = data;
+  if (!bizId) throw new AppError('bizId is required', 400);
 
   const last = await prisma.businessDetails.findFirst({
     where: { bizId },
     orderBy: { version: 'desc' },
     select: { version: true }
-  })
-  const nextVersion = last ? last.version + 1 : 1
+  });
+
+  const nextVersion = last ? last.version + 1 : 1;
 
   return await prisma.businessDetails.create({
     data: {
       ...data,
       version: nextVersion
     }
-  })
+  });
+};
+
+const saveBizIcon = async (bizName, s3Url) => {
+  const cdnUrl = transformS3UrlToCDN(s3Url);
+  return {
+    message: `Biz icon for ${bizName} uploaded successfully`,
+    imageUrl: cdnUrl,
+  };
+};
+
+const saveBizGallery = async (bizName, s3Urls) => {
+  const cdnUrls = s3Urls.map(transformS3UrlToCDN);
+  return {
+    message: `Gallery for ${bizName} uploaded successfully`,
+    imageUrls: cdnUrls,
+  };
 };
 
 module.exports = {
@@ -287,5 +380,8 @@ module.exports = {
   getBusinessesByLatLong,
   findBizByName,
   getRecentFeaturedBiz,
-  registerBizDetails
+  registerBizDetails,
+  saveBizIcon,
+  saveBizGallery,
+  findBizByNameUnified
 };
