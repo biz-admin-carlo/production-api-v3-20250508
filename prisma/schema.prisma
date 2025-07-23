@@ -1,48 +1,67 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
-}
-
 model SubscriberPaymentInfo {
-  id                    Int      @id @default(autoincrement())
-  referenceId         String   @unique @default(uuid())
-  userId                String
-  email                 String?
-  phone                 String?
-  country               String?
-  address               String?
-  cvcEncrypted          String   
-  expirationEncrypted   String   
-  cardEncrypted         String   
-  maskedCardNumber      String   
-  maskedExpirationYear  String   
-  fullName              String?
-  createdAt             DateTime @default(now())
+  id                   Int      @id @default(autoincrement())
+  referenceId          String   @unique @default(uuid())
+  userId               String
+  email                String?
+  phone                String?
+  country              String?
+  address              String?
+  cvcEncrypted         String
+  expirationEncrypted  String
+  cardEncrypted        String
+  maskedCardNumber     String
+  maskedExpirationYear String
+  fullName             String?
+  createdAt            DateTime @default(now())
+  zipCode              String?
 }
 
 model BusinessDetails {
-  id              Int       @id @default(autoincrement())
-  bizId           String                                
-  version         Int       @default(1)                  
+  id              Int      @id @default(autoincrement())
+  bizId           String
+  bizName         String
+  state           String
+  fullAddress     String
+  contactNumber   String
+  categories      String[]
+  servicesOffered String[]
+  keywords        String[]
+  description     String
+  emailAddress    String
+  otherWebsites   String[]
+  images          String[]
+  iconUrl         String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  version         Int      @default(1)
+  bizAlias        String   @default("")
+  latitude        Float?
+  longitude       Float?
+  officeHours     Json?
+}
 
-   bizName         String
-   state           String
-   fullAddress     String
-   contactNumber   String
-   categories      String[]                           
-   servicesOffered String[]                          
-   keywords        String[]
-   description     String
-   emailAddress    String
-   otherWebsites   String[]                           
-   officeHours     String[]                            
-   images          String[]                            
-   iconUrl         String                             
+model RequestLog {
+  id           Int      @id @default(autoincrement())
+  method       String
+  url          String
+  status       Int
+  responseTime Float    @map("responsetime")
+  ip           String
+  userAgent    String   @map("useragent")
+  machineName  String   @map("machinename")
+  macAddress   String   @map("macaddress")
+  latitude     Float?   @map("latitude")
+  longitude    Float?   @map("longitude")
+  createdAt    DateTime @default(now()) @map("createdat")
 
-   createdAt       DateTime  @default(now())
-   updatedAt       DateTime  @updatedAt
+  @@map("request_logs")
 }

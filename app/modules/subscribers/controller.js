@@ -1,4 +1,3 @@
-// app/modules/subscribers/controller.js
 const { registerBillingDetails, getBillingDetailsByUser }     = require('./service');
 const User                            = require('../users/model');
 const AppError                       = require('../../utils/AppError');
@@ -56,15 +55,36 @@ const createBillingDetails = async (req, res, next) => {
   }
 };
 
-
-async function fetchBillingDetails(req, res, next) {
+const fetchBillingDetails = async (req, res, next) => {
   try {
-    const userId = req.user.userId;
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Unauthorized: missing userId from token.',
+      });
+    }
+
     const details = await getBillingDetailsByUser(userId);
-    if (!details) throw new AppError('No billing info found', 404);
-    res.json({ success: true, data: details });
+
+    if (!details) {
+      return res.status(200).json({
+        success: true,
+        hasBilling: false,
+        data: null,
+        message: 'No billing details saved yet.',
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      hasBilling: true,
+      data: details,
+      timestamp: new Date().toISOString(),
+    });
   } catch (err) {
-    next(err);
+    next(err); // still bubble unexpected errors to your global handler
   }
 }
 

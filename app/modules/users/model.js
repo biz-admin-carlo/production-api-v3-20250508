@@ -28,7 +28,7 @@ const userSchema = new mongoose.Schema({
   },
   birthday: {
     type: String,
-    required: [true, 'Birthday is required.']
+    required: false
   },
   referralCode: {
     type: String,
@@ -43,7 +43,16 @@ const userSchema = new mongoose.Schema({
     enum: ['0', '11', '12', '21', '22', '23', '31'],
     default: '11',
     required: true
-  }  
+  }, 
+  profileImageUrl: {
+    type: String,
+    default: null,
+  },
+
+  profileImageUrls: {
+    type: [String],
+    default: [],
+  },
 }, {
   timestamps: {
     createdAt: 'createdAt',
@@ -53,6 +62,12 @@ const userSchema = new mongoose.Schema({
 
 userSchema.virtual('fullName').get(function () {
   return `${this.firstName} ${this.lastName}`;
+});
+
+userSchema.virtual('avatarUrl').get(function () {
+  if (this.profileImageUrl) return this.profileImageUrl;
+  const arr = this.profileImageUrls;
+  return Array.isArray(arr) && arr.length ? arr[arr.length - 1] : null;
 });
 
 userSchema.index({ userCode: 1 });
