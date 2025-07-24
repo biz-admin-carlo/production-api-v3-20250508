@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const multer = require('multer');
 const authMiddleware = require('../../middlewares/authMiddleware');
 const { 
     getAccountDetails, 

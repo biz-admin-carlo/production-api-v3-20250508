@@ -84,9 +84,10 @@ function emailShell({ title, bodyHtml }) {
       ${title ? `<h2 style="color:#111827;font-size:20px;margin-top:0;">${title}</h2>` : ''}
       ${bodyHtml}
       <hr style="border:none;border-top:1px solid #e5e7eb;margin:32px 0;" />
-      <footer style="font-size:12px;color:#9ca3af;text-align:center;">
-        &copy; ${year} BizSolutions LLC. Do not reply to this email.
-      </footer>
+        <footer style="font-size:12px;color:#9ca3af;text-align:center;">
+          <p>This is a system-generated e-mail. Please do not reply.</p>
+          <p>&copy; ${year} BizSolutions LLC.</p>
+        </footer>
     </div>
   `;
 }
@@ -194,13 +195,13 @@ function getWelcomeEmailHtml(user, activationLink) {
         This link is valid for 24 hours.
       </p>
       <footer style="font-size:12px;color:#9ca3af;text-align:center;margin-top:32px;">
-        &copy; ${new Date().getFullYear()} BizSolutions LLC. Do not reply.
+        <p>This is a system-generated e-mail. Please do not reply.</p>
+        <p>&copy; ${new Date().getFullYear()} BizSolutions LLC.</p>
       </footer>
     </div>
   `;
 }
 
-// ————— Billing notification template —————
 function getBillingNotificationHtml({ fullName, referenceId, submittedAt, cardLast4 }) {
   const niceDate = new Date(submittedAt).toLocaleString('en-US', {
     dateStyle: 'medium', timeStyle: 'short'
@@ -227,7 +228,8 @@ function getBillingNotificationHtml({ fullName, referenceId, submittedAt, cardLa
       </p>
       <hr style="border:none;border-top:1px solid #e1e1e1;margin:20px 0;" />
       <footer style="font-size:12px;color:#999;text-align:center;">
-        &copy; ${new Date().getFullYear()} BizSolutions LLC.
+        <p>This is a system-generated e-mail. Please do not reply.</p>
+        <p>&copy; ${new Date().getFullYear()} BizSolutions LLC.</p>
       </footer>
     </div>
   `;

@@ -1,4 +1,5 @@
 const User = require('../users/model');
+const Biz = require('../biz/model');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { sendMail, getWelcomeEmailHtml } = require('../../utils/sendEmailGraph');
@@ -14,17 +15,30 @@ const loginUser = async ({ email, password }) => {
 
   if (!user.isActive) throw new Error('Account is inactive');
 
+  let bizId = null;
+  let bizName = null;
+
+  if (user.userCode === '12') {
+    const biz = await Biz.findOne({ email: user.email }).select('_id name');
+    if (biz) {
+      bizId = biz._id.toString();
+      bizName = biz.name;
+    }
+  }
+
   const payload = {
     userId: user._id,
     userCode: user.userCode || 11,
     userFirstName: user.firstName,
     userLastName: user.lastName,
     status: user.isActive,
-    email: user.email
+    email: user.email,
+    bizId,
+    bizName
   };
 
-  const accessToken = jwt.sign(payload, process.env.JWT_SECRET); // no expiry
-  const refreshToken = jwt.sign(payload, process.env.JWT_REFRESH_SECRET); // no expiry  
+  const accessToken = jwt.sign(payload, process.env.JWT_SECRET);
+  const refreshToken = jwt.sign(payload, process.env.JWT_REFRESH_SECRET);
 
   return {
     accessToken,
@@ -34,7 +48,9 @@ const loginUser = async ({ email, password }) => {
       fullName: user.fullName,
       email: user.email,
       userCode: user.userCode || 11,
-      status: user.isActive
+      status: user.isActive,
+      bizId,
+      bizName
     }
   };
 };
