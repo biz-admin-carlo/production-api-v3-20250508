@@ -326,6 +326,39 @@ const findBizByNameUnified = async (bizName) => {
   return mongoMatch;
 };
 
+const findBizById = async (bizId) => {
+  if (!bizId) return null;
+
+  const pgMatch = await prisma.businessDetails.findFirst({
+    where: {
+      OR: [
+        { bizId: bizId }
+      ],
+    },
+    orderBy: {
+      version: 'desc',
+    },
+  });
+
+  if (pgMatch) {
+    return normalizePostgresToMongoShape(pgMatch);
+  }
+
+  const mongoMatch = await Biz.findOne({
+    _id: bizId,
+    isArchived: false,
+  }).lean();
+
+  if (!mongoMatch) {
+    mongoMatch = await Biz.findOne({
+      isArchived: false,
+      subscriptionName: { $exists: true, $ne: null },
+    }).sort({ createdAt: -1 }).lean();
+  }
+
+  return mongoMatch;
+};
+
 const getRecentFeaturedBiz = async () => {
   try {
     const businesses = await Biz.find({
@@ -387,5 +420,6 @@ module.exports = {
   registerBizDetails,
   saveBizIcon,
   saveBizGallery,
-  findBizByNameUnified
+  findBizByNameUnified,
+  findBizById
 };
