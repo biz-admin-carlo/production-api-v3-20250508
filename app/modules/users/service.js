@@ -187,6 +187,9 @@ const fetchSubscriptionDetails = async (userId) => {
     )
     .lean();
 
+  const slugify = (name = "") =>
+      encodeURIComponent(name.trim().replace(/\s+/g, "-").toLowerCase());
+
   const emailSet = new Set([subscriberEmail]);
   for (const biz of bizList) {
     const em = extractBizOwnerEmail(biz);
@@ -254,6 +257,7 @@ const fetchSubscriptionDetails = async (userId) => {
     return {
       bizId: biz._id,
       businessName,
+      slugBizName: slugify(businessName),
       businessOwner: ownerName,
       email,
       planName,

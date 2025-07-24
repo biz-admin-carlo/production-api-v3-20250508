@@ -248,9 +248,13 @@ const findBizByName = async (bizName) => {
 };
 
 const normalizePostgresToMongoShape = (pgData) => {
+  const slugify = (name = "") =>
+    encodeURIComponent(name.trim().replace(/\s+/g, "-").toLowerCase());
+
   return {
     alias: pgData.bizAlias || '',
     name: pgData.bizName,
+    slugBizName: slugify(pgData.bizName),
     email: pgData.emailAddress,
     coordinates: {
       type: 'Point',
