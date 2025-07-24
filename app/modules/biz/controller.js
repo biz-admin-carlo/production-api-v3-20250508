@@ -5,6 +5,7 @@ const {
   getRecentFeaturedBiz, 
   registerBizDetails,
   saveBizIcon,
+  findBizById,
   saveBizGallery
 } = require('./service');
 
@@ -68,6 +69,22 @@ const getBizByName = async (req, res, next) => {
     .join(' ');
 
     const business = await findBizByNameUnified(humanReadableName);
+
+    if (!business) {
+      return res.status(404).json({ success: false, message: 'No business found' });
+    }
+
+    return res.status(200).json({ success: true, data: business });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getBizDetails = async (req, res, next) => {
+  try {
+    const { bizId } = req.user;
+    
+    const business = await findBizById(bizId);
 
     if (!business) {
       return res.status(404).json({ success: false, message: 'No business found' });
@@ -158,5 +175,6 @@ module.exports = {
   getFeaturedBiz, 
   createBizDetails,
   handleBizIconUpload,
-  handleBizGalleryUpload
+  handleBizGalleryUpload,
+  getBizDetails
 };
