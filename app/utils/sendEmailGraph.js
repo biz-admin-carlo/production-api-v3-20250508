@@ -202,6 +202,44 @@ function getWelcomeEmailHtml(user, activationLink) {
   `;
 }
 
+function getWelcomeSubscriberEmailHtml(user, activationLink, tempPassword) {
+  return `
+    <div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;padding:32px;">
+      <div style="border-bottom:3px solid #f97316;margin-bottom:24px;">
+        <h1 style="color:#f97316;margin:0;">MyBizSolutions</h1>
+        <small style="color:#6b7280;">Powered by BizSolutions LLC</small>
+      </div>
+      <h2 style="color:#111827;font-size:20px;">Welcome, ${user.fullName}!</h2>
+      <p>Your account has been created successfully. You can now log in using the following credentials:</p>
+      <table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:14px;">
+        <tr>
+          <td style="padding:8px;border:1px solid #ddd;"><strong>Email</strong></td>
+          <td style="padding:8px;border:1px solid #ddd;">${user.email}</td>
+        </tr>
+        <tr>
+          <td style="padding:8px;border:1px solid #ddd;"><strong>Temporary Password</strong></td>
+          <td style="padding:8px;border:1px solid #ddd;">${tempPassword}</td>
+        </tr>
+      </table>
+      <p>Please activate your account by clicking the button below:</p>
+      <div style="text-align:center;margin:24px 0;">
+        <a href="${activationLink}"
+           style="background:#f97316;color:#fff;padding:12px 24px;
+                  text-decoration:none;border-radius:6px;font-weight:bold;">
+          ACTIVATE MY ACCOUNT
+        </a>
+      </div>
+      <p style="font-size:14px;color:#6b7280;">
+        This link is valid for 24 hours. After logging in, we strongly recommend that you change your password.
+      </p>
+      <footer style="font-size:12px;color:#9ca3af;text-align:center;margin-top:32px;">
+        <p>This is a system-generated e-mail. Please do not reply.</p>
+        <p>&copy; ${new Date().getFullYear()} BizSolutions LLC.</p>
+      </footer>
+    </div>
+  `;
+}
+
 function getBillingNotificationHtml({ fullName, referenceId, submittedAt, cardLast4 }) {
   const niceDate = new Date(submittedAt).toLocaleString('en-US', {
     dateStyle: 'medium', timeStyle: 'short'
@@ -240,5 +278,6 @@ module.exports = {
   getPaymentSuccessHtml,
   getDisputeNotificationHtml,
   getWelcomeEmailHtml,
-  getBillingNotificationHtml
+  getBillingNotificationHtml,
+  getWelcomeSubscriberEmailHtml
 };
