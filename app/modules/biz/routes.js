@@ -18,7 +18,7 @@ router.get('/retrieve-featured/', generalLimiter, getFeaturedBiz);
 router.get('/category/location', generalLimiter, searchByLocation);
 router.get('/category/:latitude/:longitude', generalLimiter, searchByGeoCoordinates);
 router.get('/:bizName', generalLimiter, getBizByName);
-router.get('/', authMiddleware, getBizDetails)
+router.get('/', generalLimiter, authMiddleware, getBizDetails)
 
 router.post('/details/', generalLimiter, createBizDetails);
 router.post("/biz-icon", generalLimiter, uploadSingle, handleBizIconUpload);
