@@ -1,4 +1,9 @@
-const { loginUser, handleForgotPassword, createUser } = require('./service');
+const { 
+  loginUser, 
+  handleForgotPassword, 
+  createUser,
+  createSubscriber
+} = require('./service');
 
 const login = async (req, res, next) => {
 
@@ -57,4 +62,23 @@ const register = async (req, res, next) => {
   }
 };
 
-module.exports = { login, forgotPassword, register };
+const registerSubsriber = async (req, res, next) => {
+  try {
+    const user = await createSubscriber(req.body);
+
+    res.status(201).json({
+      success: true,
+      message: 'Account created successfully',
+      data: user,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { 
+  login, 
+  forgotPassword, 
+  register,
+  registerSubsriber 
+};
