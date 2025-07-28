@@ -273,11 +273,124 @@ function getBillingNotificationHtml({ fullName, referenceId, submittedAt, cardLa
   `;
 }
 
+function getAdminPlanChangeNotificationHtml({
+  fullName,
+  email,
+  userId,
+  currentPlan,
+  targetPlan,
+  reason,
+  submittedAt,
+  referenceId,
+}) {
+  const niceDate = formatDateTime(submittedAt, { locale: 'en-US' });
+
+  const bodyHtml = `
+    <p style="font-size:16px;">A user has requested a subscription plan change.</p>
+    <table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:14px;">
+      <tr><td style="padding:8px;border:1px solid #ddd;"><strong>User</strong></td><td style="padding:8px;border:1px solid #ddd;">${fullName} (${email})</td></tr>
+      <tr><td style="padding:8px;border:1px solid #ddd;"><strong>User ID</strong></td><td style="padding:8px;border:1px solid #ddd;">${userId}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #ddd;"><strong>From Plan</strong></td><td style="padding:8px;border:1px solid #ddd;">${currentPlan}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #ddd;"><strong>To Plan</strong></td><td style="padding:8px;border:1px solid #ddd;">${targetPlan}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #ddd;"><strong>Submitted At</strong></td><td style="padding:8px;border:1px solid #ddd;">${niceDate}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #ddd;"><strong>Reason</strong></td><td style="padding:8px;border:1px solid #ddd;">${reason || '—'}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #ddd;"><strong>Reference ID</strong></td><td style="padding:8px;border:1px solid #ddd;">${referenceId}</td></tr>
+    </table>
+  `;
+
+  return emailShell({
+    title: 'Plan Change Requested',
+    bodyHtml,
+  });
+}
+
+function getUserPlanChangeEmailHtml({ fullName, oldPlan, newPlan, referenceId }) {
+  return `
+    <div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;padding:32px;">
+      <div style="border-bottom:3px solid #f97316;margin-bottom:24px;">
+        <h1 style="color:#f97316;margin:0;">MyBizSolutions</h1>
+        <small style="color:#6b7280;">Powered by BizSolutions LLC</small>
+      </div>
+      <h2 style="color:#111827;">Hello ${fullName},</h2>
+      <p>This is to confirm that your subscription plan change has been successfully initiated.</p>
+      <table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:14px;">
+        <tr><td style="padding:8px;border:1px solid #ddd;"><strong>Previous Plan</strong></td><td style="padding:8px;border:1px;border:1px solid #ddd;">${oldPlan}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #ddd;"><strong>New Plan</strong></td><td style="padding:8px;border:1px solid #ddd;">${newPlan}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #ddd;"><strong>Reference ID</strong></td><td style="padding:8px;border:1px solid #ddd;">${referenceId}</td></tr>
+      </table>
+      <p style="margin-top: 24px;">Our support team will follow up with you regarding this request shortly. Please keep the reference number above for your records.</p>
+      <p>If you did not make this change or believe this is an error, please contact us at 
+        <a href="mailto:info@bizsolutions.us" style="color:#0078d4;">info@bizsolutions.us</a>.
+      </p>
+      <footer style="font-size:12px;color:#9ca3af;text-align:center;margin-top:32px;">
+        <p>This is a system-generated e-mail. Please do not reply.</p>
+        <p>&copy; ${new Date().getFullYear()} BizSolutions LLC.</p>
+      </footer>
+    </div>
+  `;
+}
+
+function getUserTerminationEmailHtml({ fullName, referenceId }) {
+  return `
+    <div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;padding:32px;">
+      <div style="border-bottom:3px solid #ef4444;margin-bottom:24px;">
+        <h1 style="color:#ef4444;margin:0;">MyBizSolutions</h1>
+        <small style="color:#6b7280;">Powered by BizSolutions LLC</small>
+      </div>
+      <h2 style="color:#111827;">Hello ${fullName},</h2>
+      <p>We received your termination request.</p>
+      <p><strong>Reference ID:</strong> ${referenceId}</p>
+      <p>Our support team will follow up with you shortly. Please use the provided reference number in your correspondence.</p>
+      <p>If this was not you, please email <a href="mailto:info@bizsolutions.us" style="color:#0078d4;">info@bizsolutions.us</a>.</p>
+      <footer style="font-size:12px;color:#9ca3af;text-align:center;margin-top:32px;">
+        <p>This is a system-generated e-mail. Please do not reply.</p>
+        <p>&copy; ${new Date().getFullYear()} BizSolutions LLC.</p>
+      </footer>
+    </div>
+  `;
+}
+
+function getAdminPlanChangeNotificationHtml({ fullName, email, userId, oldPlan, newPlan, reason, referenceId, submittedAt }) {
+  const niceDate = formatDateTime(submittedAt, { locale: 'en-US' });
+  const bodyHtml = `
+    <p style="font-size:16px;">A user has requested a subscription plan change.</p>
+    <table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:14px;">
+      <tr><td style="padding:8px;border:1px solid #ddd;"><strong>User</strong></td><td style="padding:8px;border:1px solid #ddd;">${fullName} (${email})</td></tr>
+      <tr><td style="padding:8px;border:1px solid #ddd;"><strong>User ID</strong></td><td style="padding:8px;border:1px solid #ddd;">${userId}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #ddd;"><strong>From Plan</strong></td><td style="padding:8px;border:1px solid #ddd;">${oldPlan}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #ddd;"><strong>To Plan</strong></td><td style="padding:8px;border:1px solid #ddd;">${newPlan}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #ddd;"><strong>Reference ID</strong></td><td style="padding:8px;border:1px solid #ddd;">${referenceId}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #ddd;"><strong>Submitted At</strong></td><td style="padding:8px;border:1px solid #ddd;">${niceDate}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #ddd;"><strong>Reason</strong></td><td style="padding:8px;border:1px solid #ddd;">${reason || '—'}</td></tr>
+    </table>
+  `;
+  return emailShell({ title: 'Plan Change Requested', bodyHtml });
+}
+
+function getAdminTerminationNotificationHtml({ fullName, email, userId, reason, referenceId, submittedAt }) {
+  const niceDate = formatDateTime(submittedAt, { locale: 'en-US' });
+  const bodyHtml = `
+    <p style="font-size:16px;color:#dc2626;">Termination Request Opened</p>
+    <table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:14px;">
+      <tr><td style="padding:8px;border:1px solid #ddd;"><strong>User</strong></td><td style="padding:8px;border:1px solid #ddd;">${fullName} (${email})</td></tr>
+      <tr><td style="padding:8px;border:1px solid #ddd;"><strong>User ID</strong></td><td style="padding:8px;border:1px solid #ddd;">${userId}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #ddd;"><strong>Reference ID</strong></td><td style="padding:8px;border:1px solid #ddd;">${referenceId}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #ddd;"><strong>Submitted At</strong></td><td style="padding:8px;border:1px solid #ddd;">${niceDate}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #ddd;"><strong>Reason</strong></td><td style="padding:8px;border:1px solid #ddd;">${reason || '—'}</td></tr>
+    </table>
+  `;
+  return emailShell({ title: 'Account Termination Request', bodyHtml });
+}
+
 module.exports = {
   sendMail,
   getPaymentSuccessHtml,
   getDisputeNotificationHtml,
   getWelcomeEmailHtml,
   getBillingNotificationHtml,
-  getWelcomeSubscriberEmailHtml
+  getWelcomeSubscriberEmailHtml,
+  getUserPlanChangeEmailHtml,
+  getAdminPlanChangeNotificationHtml,
+  getUserTerminationEmailHtml,
+  getAdminTerminationNotificationHtml
 };
