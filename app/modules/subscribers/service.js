@@ -105,9 +105,22 @@ async function getLatestBillingDetailsPerUser() {
   return latestRows;
 }
 
+async function savePlanChangeLog({ userId, oldPlan, newPlan, reason, referenceId }) {
+  return await prisma.planChangeLog.create({
+    data: {
+      userId,
+      oldPlan,
+      newPlan,
+      reason,
+      referenceId,
+    },
+  });
+}
+
 module.exports = {
   registerBillingDetails,
   getBillingDetailsByUser,
   getAllBillingDetails,
   getLatestBillingDetailsPerUser,
+  savePlanChangeLog,
 };
