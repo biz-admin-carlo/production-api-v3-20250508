@@ -1,7 +1,23 @@
-const { registerBillingDetails, getBillingDetailsByUser }     = require('./service');
-const User                            = require('../users/model');
-const AppError                       = require('../../utils/AppError');
-const { sendMail, getBillingNotificationHtml }                  = require('../../utils/sendEmailGraph');
+const User = require('../users/model');
+const {
+  fetchSubscriptionDetails
+} = require('../users/service');
+const {
+  generateTrackingReference
+} = require('../../utils/refUtils');
+const { 
+  registerBillingDetails, 
+  getBillingDetailsByUser,
+  savePlanChangeLog
+} = require('./service');
+const { 
+  sendMail, 
+  getBillingNotificationHtml,
+  getUserPlanChangeEmailHtml,
+  getAdminPlanChangeNotificationHtml,
+  getUserTerminationEmailHtml,
+  getAdminTerminationNotificationHtml
+} = require('../../utils/sendEmailGraph');
 
 const createBillingDetails = async (req, res, next) => {
   try {
@@ -88,4 +104,124 @@ const fetchBillingDetails = async (req, res, next) => {
   }
 }
 
-module.exports = { createBillingDetails, fetchBillingDetails };
+const planUpdates = async (req, res, next) => {
+  try {
+    const action = String(req.query.action || '').toLowerCase();
+    const { userId, email: userEmail } = req.user;
+
+    if (!['change-plan', 'terminate-plan'].includes(action)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid action. Use ?action=change-plan or ?action=terminate-plan"
+      });
+    }
+
+    const { newPlanName, reason } = req.body;
+    const subscription = await fetchSubscriptionDetails(userId);
+    const currentPlans  = subscription.subscriptions.map(s => s.planName).join(', ');
+    const referenceId   = await generateTrackingReference({ userId, action });
+
+    let oldPlan, newPlan, userHtml, adminHtml, userSubject, adminSubject;
+
+    if (action === 'change-plan') {
+      if (!newPlanName) {
+        return res.status(400).json({ success: false, message: 'newPlanName is required for change-plan.' });
+      }
+
+      oldPlan = currentPlans || 'Unknown';
+      newPlan = newPlanName;
+
+      const log = await savePlanChangeLog({
+        userId,
+        oldPlan,
+        newPlan,
+        reason,
+        referenceId
+      });
+
+      userHtml  = getUserPlanChangeEmailHtml({
+        fullName: subscription.businessOwner,
+        oldPlan,
+        newPlan,
+        referenceId: log.referenceId
+      });
+
+      adminHtml = getAdminPlanChangeNotificationHtml({
+        fullName: subscription.businessOwner,
+        email: userEmail,
+        userId,
+        oldPlan,
+        newPlan,
+        reason,
+        referenceId: log.referenceId,
+        submittedAt: log.createdAt
+      });
+
+      userSubject  = `Plan Change Request - Ref #${log.referenceId}`;
+      adminSubject = `${subscription.businessOwner} requested a Plan Change - Ref #${log.referenceId}`;
+
+      await sendMail({ to: [userEmail], subject: userSubject, html: userHtml });
+
+      const admins = await User.find({ userCode: { $in: ['0'] } }).select('email').lean();
+      const adminEmails = admins.map(u => u.email);
+      if (adminEmails.length) {
+        await sendMail({ to: adminEmails, subject: adminSubject, html: adminHtml });
+      }
+
+      return res.status(201).json({
+        success: true,
+        message: 'Plan change request logged successfully.',
+        referenceId: log.referenceId,
+        createdAt: log.createdAt
+      });
+    }
+
+    oldPlan = 'Termination of Plan';
+    newPlan = 'Termination of Plan';
+
+    const log = await savePlanChangeLog({
+      userId,
+      oldPlan,
+      newPlan,
+      reason,
+      referenceId
+    });
+
+    userHtml = getUserTerminationEmailHtml({
+      fullName: subscription.businessOwner,
+      referenceId: log.referenceId
+    });
+
+    adminHtml = getAdminTerminationNotificationHtml({
+      fullName: subscription.businessOwner,
+      email: userEmail,
+      userId,
+      reason,
+      referenceId: log.referenceId,
+      submittedAt: log.createdAt
+    });
+
+    userSubject  = `Account Termination Request - Ref #${log.referenceId}`;
+    adminSubject = `⚠️ Termination Request from ${subscription.businessOwner} - Ref #${log.referenceId}`;
+
+    await sendMail({ to: [userEmail], subject: userSubject, html: userHtml });
+
+    const admins = await User.find({ userCode: { $in: ['0'] } }).select('email').lean();
+    const adminEmails = admins.map(u => u.email);
+    if (adminEmails.length) {
+      await sendMail({ to: adminEmails, subject: adminSubject, html: adminHtml });
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: 'Termination request logged successfully.',
+      referenceId: log.referenceId,
+      createdAt: log.createdAt
+    });
+
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { createBillingDetails, fetchBillingDetails, planUpdates };

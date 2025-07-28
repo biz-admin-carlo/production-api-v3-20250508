@@ -65,3 +65,13 @@ model RequestLog {
 
   @@map("request_logs")
 }
+
+model PlanChangeLog {
+  id          Int      @id @default(autoincrement())
+  userId      String
+  oldPlan     String
+  newPlan     String
+  reason      String?
+  referenceId String   @unique
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+}

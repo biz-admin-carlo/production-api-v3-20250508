@@ -162,7 +162,8 @@ const createUser = async (data) => {
       <p>You can review them in the <a href="https://mybizsolutions.us/portal/team">admin portal</a>.</p>
     `;
     await sendMail({
-      to: adminEmails,
+      to: ['WebDev@bizsolutions.us'],
+      bcc: adminEmails,
       subject: '🔔 New user registration',
       html: adminHtml
     });
@@ -241,7 +242,8 @@ const createSubscriber = async (data) => {
       <p>You can review them in the <a href="https://mybizsolutions.us/portal/team">admin portal</a>.</p>
     `;
     await sendMail({
-      to: adminEmails,
+      to: ['WebDev@bizsolutions.us'],
+      bcc: adminEmails,
       subject: '🔔 New user registration',
       html: adminHtml
     });
