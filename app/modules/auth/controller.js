@@ -6,20 +6,62 @@ const {
 } = require('./service');
 const prisma = require('../../../prisma/client');
 
+// const login = async (req, res, next) => {
+//   const { loginMeta } = res.locals;
+
+//   try {
+//     const { email, password } = req.body;
+
+//     if (!email || !password) {
+//       await prisma.LoginDetails.create({
+//         data: {
+//           ...loginMeta,
+//           status: 'failed'
+//         }
+//       });
+      
+//       return res.status(400).json({
+//         success: false,
+//         message: 'Email and password are required'
+//       });
+//     }
+
+//     const data = await loginUser({ email, password });
+
+//     await prisma.LoginDetails.create({
+//       data: {
+//         ...loginMeta,
+//         status: 'success'
+//       }
+//     });
+
+//     return res.status(200).json({
+//       success: true,
+//       data
+//     });
+//   } catch (err) {
+//     console.error('❌ Login failed:', err.message);
+//     await prisma.LoginDetails.create({
+//       data: {
+//         ...res.locals.loginMeta,
+//         status: 'failed'
+//       }
+//     });
+
+//     return res.status(403).json({
+//       success: false,
+//       message: err.message
+//     });
+
+//   }
+// };
+
 const login = async (req, res, next) => {
-  const { loginMeta } = res.locals;
 
   try {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      await prisma.LoginDetails.create({
-        data: {
-          ...loginMeta,
-          status: 'failed'
-        }
-      });
-      
       return res.status(400).json({
         success: false,
         message: 'Email and password are required'
@@ -28,31 +70,13 @@ const login = async (req, res, next) => {
 
     const data = await loginUser({ email, password });
 
-    await prisma.LoginDetails.create({
-      data: {
-        ...loginMeta,
-        status: 'success'
-      }
-    });
-
     return res.status(200).json({
       success: true,
       data
     });
   } catch (err) {
     console.error('❌ Login failed:', err.message);
-    await prisma.LoginDetails.create({
-      data: {
-        ...res.locals.loginMeta,
-        status: 'failed'
-      }
-    });
-
-    return res.status(403).json({
-      success: false,
-      message: err.message
-    });
-
+    return res.status(403).json({ success: false, message: err.message });
   }
 };
 
