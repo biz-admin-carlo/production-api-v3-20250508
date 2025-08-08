@@ -93,7 +93,7 @@ const handleForgotPassword = async (email) => {
     </div>
   `;
 
-  await sendEmail({
+  await sendMail({
     to: user.email,
     subject: 'New password',
     html
