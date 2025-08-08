@@ -86,4 +86,6 @@ model LoginDetails {
   device     String?
   status     String?
   createdAt  DateTime @default(now())
+
+  @@map("login_details")
 }
