@@ -75,3 +75,15 @@ model PlanChangeLog {
   referenceId String   @unique
   createdAt   DateTime @default(now()) @db.Timestamptz(6)
 }
+
+model LoginDetails {
+  id         String   @id @default(uuid())
+  email      String?
+  ipAddress  String?
+  userAgent  String?
+  latitude   String?
+  longitude  String?
+  device     String?
+  status     String?
+  createdAt  DateTime @default(now())
+}
