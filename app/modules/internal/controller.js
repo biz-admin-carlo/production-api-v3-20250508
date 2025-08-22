@@ -9,6 +9,7 @@ const {
   deletePaymentById, 
   fetchAllDisputes,
   fetchAllSubscriberBillingDetails,
+  updateBizInMongo,
 } = require('./service');
 const {
   getBillingDetails
@@ -204,6 +205,81 @@ const getUpdatedCardDetails = async (req, res, next) => {
   }
 };
 
+const pickAllowedFields = (p = {}) => {
+  const allowed = {
+    bizId: p.bizId, 
+    alias: p.alias,
+    name: p.name,
+    image_url: p.image_url,
+    is_closed: p.is_closed,
+    url: p.url,
+    review_count: p.review_count,
+    categories: p.categories,                
+    rating: p.rating,
+    email: p.email,
+    coordinates: p.coordinates,              
+    transactions: p.transactions,            
+    location: p.location,                    
+    phone: p.phone,
+    display_phone: p.display_phone,
+    isArchived: p.isArchived,
+    isArchivedId: p.isArchivedId,            
+    isBizDB: p.isBizDB,
+    userID: p.userID,                        
+    bizStatus: p.bizStatus,
+    paymentStatus: p.paymentStatus,
+    subscriptionName: p.subscriptionName,
+    paymentGateway: p.paymentGateway,
+    customerEmail: p.customerEmail,
+    amountTransacted: p.amountTransacted,
+    keywords: p.keywords,                    
+    agentName: p.agentName,
+    agentId: p.agentId
+  };
+
+  Object.keys(allowed).forEach(k => allowed[k] === undefined && delete allowed[k]);
+  return allowed;
+};
+
+async function editBizDetails(req, res, next) {
+  try {
+    const body = pickAllowedFields(req.body || {});
+    if (!body.bizId) {
+      return res.status(400).json({ success: false, message: 'bizId is required' });
+    }
+
+    const updated = await updateBizInMongo(body, {
+      actorUserId: req.user?.userId ?? null,
+      actorEmail:  req.user?.email  ?? null
+    });
+
+    if (!updated) {
+      return res.status(404).json({ success: false, message: 'Business not found' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Business details updated successfully',
+      data: {
+        _id: updated._id,
+        alias: updated.alias,
+        name: updated.name,
+        email: updated.email,
+        phone: updated.phone,
+        location: updated.location,
+        categories: updated.categories,
+        rating: updated.rating,
+        isArchived: updated.isArchived,
+        bizStatus: updated.bizStatus,
+        paymentStatus: updated.paymentStatus,
+        updatedAt: updated.updatedAt
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = { 
   getAllUsers, 
   updateAccountType, 
@@ -215,5 +291,6 @@ module.exports = {
   deletePayment, 
   getAllDisputes, 
   getCheckPayment,
-  getUpdatedCardDetails
+  getUpdatedCardDetails,
+  editBizDetails
 };
