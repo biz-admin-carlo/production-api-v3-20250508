@@ -4,7 +4,6 @@ const Customer  = require('../../webhooks/CustomerModel');
 const Dispute   = require('../../webhooks/DisputeModel');
 const mongoose  = require('mongoose');
 const { Types } = mongoose;
-const prisma = require('../../../lib/prisma');
 const AppError = require('../../utils/AppError');
 
 const {
@@ -189,6 +188,85 @@ const fetchAllLatestSubscriberBillingDetailsPerUser = async () => {
   return getLatestBillingDetailsPerUser();
 };
 
+function buildUpdateDoc(payload) {
+  const { bizId, ...rest } = payload;
+
+  const set = {};
+  const unset = {};
+
+  const assign = (path, value) => {
+    if (value === undefined) return;     
+    if (value === null) { unset[path] = ""; return; } 
+    set[path] = value;
+  };
+
+  const flat = [
+    'alias','name','image_url','is_closed','url','review_count','rating','email',
+    'phone','display_phone','isArchived','isArchivedId','isBizDB','userID',
+    'bizStatus','paymentStatus','subscriptionName','paymentGateway',
+    'customerEmail','amountTransacted','agentName','agentId'
+  ];
+  flat.forEach(k => assign(k, rest[k]));
+
+  assign('transactions', rest.transactions);
+  assign('categories',   rest.categories);
+  assign('keywords',     rest.keywords);
+
+  if (rest.coordinates !== undefined) {
+    if (rest.coordinates === null) {
+      unset['coordinates'] = "";
+    } else {
+      const { type, coordinates } = rest.coordinates || {};
+      if (type && Array.isArray(coordinates) && coordinates.length === 2) {
+        assign('coordinates', { type, coordinates: [Number(coordinates[0]), Number(coordinates[1])] });
+      } else {
+      }
+    }
+  }
+
+  if (rest.location !== undefined) {
+    if (rest.location === null) {
+      unset['location'] = "";
+    } else {
+      const loc = rest.location;
+      const locKeys = ['address1','address2','address3','city','zip_code','country','state','display_address'];
+      locKeys.forEach(k => assign(`location.${k}`, loc[k]));
+    }
+  }
+
+  const update = {};
+  if (Object.keys(set).length)   update.$set   = set;
+  if (Object.keys(unset).length) update.$unset = unset;
+  return update;
+}
+
+async function updateBizInMongo(payload) {
+  const { bizId } = payload;
+
+  if (!mongoose.Types.ObjectId.isValid(bizId)) {
+    const err = new Error('Invalid bizId format');
+    err.status = 400;
+    throw err;
+  }
+
+  const exists = await Biz.findById(bizId).lean();
+  if (!exists) return null;
+
+  const update = buildUpdateDoc(payload);
+
+  if (!update.$set && !update.$unset) {
+    return await Biz.findById(bizId).lean();
+  }
+
+  const updated = await Biz.findOneAndUpdate(
+    { _id: bizId },
+    update,
+    { new: true, runValidators: true }
+  ).lean();
+
+  return updated;
+}
+
 module.exports = { 
   fetchAllUsers, 
   updateUserCode, 
@@ -204,4 +282,5 @@ module.exports = {
   fetchLatestSubscriberBillingDetails,
   fetchAllSubscriberBillingDetails,
   fetchAllLatestSubscriberBillingDetailsPerUser,
+  updateBizInMongo
 };

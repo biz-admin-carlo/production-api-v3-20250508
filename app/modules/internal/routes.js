@@ -11,7 +11,8 @@ const {
   getCheckPayment,
   updateAccountType,
   deleteUserAccount,
-  getUpdatedCardDetails
+  getUpdatedCardDetails,
+  editBizDetails
 } = require('./controller');
 
 const router = express.Router();
@@ -26,6 +27,8 @@ router.post('/check-payment/', internalMiddleware, getCheckPayment);
 router.put('/type-updates/', internalMiddleware, updateAccountType);
 router.delete('/users/', internalMiddleware, deleteUserAccount);
 router.delete('/payment/', internalMiddleware, deletePayment);
+
+router.put('/biz-details/', internalMiddleware, editBizDetails);
 
 // router.get('/updated-card-details/:userId/', internalMiddleware, getUpdatedCardDetails);
 
