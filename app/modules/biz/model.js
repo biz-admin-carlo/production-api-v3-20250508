@@ -42,6 +42,8 @@ const imageSchema = new mongoose.Schema({
 
 const bizSchema = new mongoose.Schema({
   alias: String,
+  iconUrl: String,       
+  description: String,
   name: {
     type: String,
     required: [true, "Business name is required."]
