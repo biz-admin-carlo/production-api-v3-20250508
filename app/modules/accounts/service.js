@@ -41,6 +41,8 @@ const createNewBiz = async (user, details) => {
     phone,
     display_phone,
     alias,
+    description,         
+    iconUrl, 
     url,
     category_alias,
     category_title,
@@ -104,7 +106,9 @@ const createNewBiz = async (user, details) => {
     keywords: keywords && keywords.length > 0 ? keywords : [],
     bizStatus,
     paymentStatus,
-    isBizDB: true
+    isBizDB: true,
+    description,
+    iconUrl
   });
 
   await newBiz.save();
