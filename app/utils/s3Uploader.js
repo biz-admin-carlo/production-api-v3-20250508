@@ -38,7 +38,8 @@ const s3Storage = multerS3({
       
         if (routePath.includes("biz-icon")) {
           folder = "biz/icons/";
-          fileName = `${safeBizName}_icon${ext}`;
+          const uuid = uuidv4();
+          fileName = `${safeBizName}_icon_${uuid}${ext}`;
         } else if (routePath.includes("biz-gallery")) {
           folder = "biz/images/";
     
