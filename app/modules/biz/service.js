@@ -361,14 +361,17 @@ const findBizById = async (bizId) => {
 
 const getRecentFeaturedBiz = async () => {
   try {
+    const fourWeeksAgo = new Date();
+    fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
+
     const businesses = await Biz.find({
       isArchived: false,
-      subscriptionName: { $exists: true, $ne: null }
+      subscriptionName: { $exists: true, $ne: null },
+      createdAt: { $gte: fourWeeksAgo }
     })
-      .sort({ createdAt: -1 }) 
-      .limit(10)
+      .sort({ createdAt: -1 })
       .lean();
-    
+
     return businesses;
   } catch (err) {
     console.error('❌ Error fetching featured businesses:', err);
