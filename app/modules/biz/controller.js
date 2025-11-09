@@ -6,8 +6,67 @@ const {
   registerBizDetails,
   saveBizIcon,
   findBizById,
-  saveBizGallery
+  saveBizGallery,
+  findSearchSuggestions
 } = require('./service');
+
+const getSearchSuggestions = async (req, res, next) => {
+  try {
+    const { q } = req.query;
+    
+    // Validation
+    if (!q || typeof q !== 'string') {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Query parameter "q" is required' 
+      });
+    }
+
+    const trimmedQuery = q.trim();
+
+    if (trimmedQuery.length < 2) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Query must be at least 2 characters long' 
+      });
+    }
+
+    if (trimmedQuery.length > 100) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Query must not exceed 100 characters' 
+      });
+    }
+
+    // Execute search
+    const startTime = Date.now();
+    const results = await findSearchSuggestions(trimmedQuery);
+    const executionTime = Date.now() - startTime;
+
+    // Calculate total matches
+    const totalMatches = results.businesses.length + results.categories.length;
+
+    // Return formatted response
+    res.status(200).json({
+      success: true,
+      data: {
+        businesses: results.businesses,
+        categories: results.categories,
+        meta: {
+          query: trimmedQuery,
+          totalResults: totalMatches,
+          businessCount: results.businesses.length,
+          categoryCount: results.categories.length,
+          executionTime: `${executionTime}ms`
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error in getSearchSuggestions controller:', error);
+    next(error);
+  }
+};
 
 const searchByLocation = async (req, res, next) => {
   try {
@@ -176,5 +235,6 @@ module.exports = {
   createBizDetails,
   handleBizIconUpload,
   handleBizGalleryUpload,
-  getBizDetails
+  getBizDetails,
+  getSearchSuggestions
 };

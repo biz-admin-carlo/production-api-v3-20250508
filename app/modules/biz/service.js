@@ -326,6 +326,322 @@ const findBizByNameUnified = async (bizName) => {
   return mongoMatch;
 };
 
+/**
+ * Find search suggestions based on user query
+ * PRIORITIZES BUSINESS NAMES FIRST
+ * Returns: 7 businesses (max) + 3 categories (max) = 10 total items
+ * @param {string} query - Search query (min 2 characters)
+ * @returns {Object} - { businesses: [], categories: [] }
+ */
+const findSearchSuggestions = async (query) => {
+  try {
+    const normalizedQuery = query.trim().toLowerCase().replace(/\s+/g, ' ');
+    
+    if (normalizedQuery.length < 2) {
+      return { businesses: [], categories: [] };
+    }
+
+    const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const escapedQuery = escapeRegex(normalizedQuery);
+
+    const startsWithRegex = new RegExp(`^${escapedQuery}`, 'i');
+    const containsRegex = new RegExp(escapedQuery, 'i');
+    const wordBoundaryRegex = new RegExp(`\\b${escapedQuery}`, 'i');
+
+    const baseFilter = {
+      isArchived: false,
+      is_closed: false
+    };
+
+    // PHASE 1: SEARCH BUSINESSES (Max 7)
+    
+    const businessAggregation = await Biz.aggregate([
+      {
+        $match: baseFilter
+      },
+      {
+        $addFields: {
+          nameExactMatch: {
+            $cond: [
+              { $eq: [{ $toLower: '$name' }, normalizedQuery] },
+              1000,
+              0
+            ]
+          },
+          nameStartsWith: {
+            $cond: [
+              { $regexMatch: { input: '$name', regex: startsWithRegex } },
+              500,
+              0
+            ]
+          },
+          nameWordBoundary: {
+            $cond: [
+              { $regexMatch: { input: '$name', regex: wordBoundaryRegex } },
+              250,
+              0
+            ]
+          },
+          nameContains: {
+            $cond: [
+              { $regexMatch: { input: '$name', regex: containsRegex } },
+              100,
+              0
+            ]
+          },
+          categoryMatch: {
+            $cond: [
+              {
+                $gt: [
+                  {
+                    $size: {
+                      $filter: {
+                        input: '$categories',
+                        as: 'cat',
+                        cond: { $regexMatch: { input: '$$cat.title', regex: containsRegex } }
+                      }
+                    }
+                  },
+                  0
+                ]
+              },
+              50,
+              0
+            ]
+          },
+          cityMatch: {
+            $cond: [
+              { $regexMatch: { input: { $ifNull: ['$location.city', ''] }, regex: containsRegex } },
+              25,
+              0
+            ]
+          },
+          stateMatch: {
+            $cond: [
+              { $regexMatch: { input: { $ifNull: ['$location.state', ''] }, regex: containsRegex } },
+              15,
+              0
+            ]
+          },
+          addressMatch: {
+            $cond: [
+              { $regexMatch: { input: { $ifNull: ['$location.address1', ''] }, regex: containsRegex } },
+              10,
+              0
+            ]
+          },
+          zipMatch: {
+            $cond: [
+              { $regexMatch: { input: { $ifNull: ['$location.zip_code', ''] }, regex: containsRegex } },
+              5,
+              0
+            ]
+          },
+          keywordMatch: {
+            $cond: [
+              {
+                $gt: [
+                  {
+                    $size: {
+                      $filter: {
+                        input: { $ifNull: ['$keywords', []] },
+                        as: 'kw',
+                        cond: { $regexMatch: { input: '$$kw', regex: containsRegex } }
+                      }
+                    }
+                  },
+                  0
+                ]
+              },
+              20,
+              0
+            ]
+          },
+          paidBoost: {
+            $cond: [
+              { $and: [
+                { $ne: ['$subscriptionName', null] },
+                { $ne: ['$subscriptionName', ''] }
+              ]},
+              300,
+              0
+            ]
+          },
+          qualityBoost: {
+            $add: [
+              { $multiply: [{ $ifNull: ['$rating', 0] }, 2] },
+              { $multiply: [{ $ifNull: ['$review_count', 0] }, 0.1] }
+            ]
+          }
+        }
+      },
+      {
+        $addFields: {
+          totalScore: {
+            $add: [
+              '$nameExactMatch',
+              '$nameStartsWith', 
+              '$nameWordBoundary',
+              '$nameContains',
+              '$categoryMatch',
+              '$cityMatch',
+              '$stateMatch',
+              '$addressMatch',
+              '$zipMatch',
+              '$keywordMatch',
+              '$paidBoost',
+              '$qualityBoost'
+            ]
+          }
+        }
+      },
+      {
+        $match: {
+          totalScore: { $gt: 0 }
+        }
+      },
+      {
+        $sort: { totalScore: -1, rating: -1, createdAt: -1 }
+      },
+      {
+        $limit: 4
+      },
+      {
+        $project: {
+          name: 1,
+          slug: {
+            $toLower: {
+              $replaceAll: {
+                input: { $trim: { input: '$name' } },
+                find: ' ',
+                replacement: '-'
+              }
+            }
+          },
+          city: '$location.city',
+          state: '$location.state',
+          address: '$location.address1',
+          zipCode: '$location.zip_code',
+          iconUrl: { $ifNull: ['$iconUrl', '$image_url'] },
+          rating: 1,
+          review_count: 1,
+          categories: {
+            $map: {
+              input: { $slice: ['$categories', 3] },
+              as: 'cat',
+              in: '$$cat.title'
+            }
+          },
+          isPaid: {
+            $cond: [
+              { $and: [
+                { $ne: ['$subscriptionName', null] },
+                { $ne: ['$subscriptionName', ''] }
+              ]},
+              true,
+              false
+            ]
+          },
+          phone: { $ifNull: ['$display_phone', '$phone'] },
+          totalScore: 1,
+          matchType: {
+            $switch: {
+              branches: [
+                { case: { $gt: ['$nameExactMatch', 0] }, then: 'exact' },
+                { case: { $gt: ['$nameStartsWith', 0] }, then: 'starts' },
+                { case: { $gt: ['$nameWordBoundary', 0] }, then: 'word' },
+                { case: { $gt: ['$nameContains', 0] }, then: 'contains' },
+                { case: { $gt: ['$categoryMatch', 0] }, then: 'category' },
+                { case: { $gt: ['$cityMatch', 0] }, then: 'city' },
+                { case: { $gt: ['$stateMatch', 0] }, then: 'state' }
+              ],
+              default: 'other'
+            }
+          }
+        }
+      }
+    ]);
+    
+    const categoryAggregation = await Biz.aggregate([
+      {
+        $match: baseFilter
+      },
+      {
+        $unwind: '$categories'
+      },
+      {
+        $match: {
+          'categories.title': containsRegex
+        }
+      },
+      {
+        $group: {
+          _id: {
+            title: '$categories.title',
+            alias: '$categories.alias'
+          },
+          count: { $sum: 1 },
+          hasPaidBusiness: {
+            $max: {
+              $cond: [
+                { $and: [
+                  { $ne: ['$subscriptionName', null] },
+                  { $ne: ['$subscriptionName', ''] }
+                ]},
+                1,
+                0
+              ]
+            }
+          },
+          avgRating: { $avg: '$rating' }
+        }
+      },
+      {
+        $addFields: {
+          matchScore: {
+            $cond: [
+              { $regexMatch: { input: '$_id.title', regex: startsWithRegex } },
+              100,
+              50
+            ]
+          }
+        }
+      },
+      {
+        $sort: { matchScore: -1, count: -1, avgRating: -1 }
+      },
+      {
+        $limit: 3  
+      },
+      {
+        $project: {
+          _id: 0,
+          title: '$_id.title',
+          alias: '$_id.alias',
+          count: 1,
+          hasPaidBusiness: { $eq: ['$hasPaidBusiness', 1] },
+          matchType: {
+            $cond: [
+              { $regexMatch: { input: '$_id.title', regex: startsWithRegex } },
+              'starts',
+              'contains'
+            ]
+          }
+        }
+      }
+    ]);
+
+    return {
+      businesses: businessAggregation,
+      categories: categoryAggregation
+    };
+
+  } catch (error) {
+    console.error('❌ Error in findSearchSuggestions:', error);
+    throw error;
+  }
+};
+
 const findBizById = async (bizId) => {
   if (!bizId) return null;
 
@@ -424,5 +740,6 @@ module.exports = {
   saveBizIcon,
   saveBizGallery,
   findBizByNameUnified,
-  findBizById
+  findBizById,
+  findSearchSuggestions
 };
