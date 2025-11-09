@@ -11,9 +11,11 @@ const {
     createBizDetails,
     handleBizIconUpload,
     handleBizGalleryUpload,
-    getBizDetails
+    getBizDetails,
+    getSearchSuggestions
 } = require('./controller');
 
+router.get('/search-suggestions', generalLimiter, getSearchSuggestions);
 router.get('/retrieve-featured/', generalLimiter, getFeaturedBiz);
 router.get('/category/location', generalLimiter, searchByLocation);
 router.get('/category/:latitude/:longitude', generalLimiter, searchByGeoCoordinates);
