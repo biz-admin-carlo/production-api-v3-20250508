@@ -107,6 +107,45 @@ const bizSchema = new mongoose.Schema({
 
 }, { timestamps: true });
 
+// ========================================
+// EXISTING INDEX (Keep this!)
+// ========================================
 bizSchema.index({ 'coordinates.coordinates': '2dsphere' });
+
+// ========================================
+// NEW INDEXES FOR SEARCH SUGGESTIONS
+// ========================================
+
+// Text index for full-text search with weighted fields
+// Name is 10x more important than other fields
+bizSchema.index({
+  name: 'text',
+  'categories.title': 'text',
+  'location.city': 'text',
+  'location.state': 'text',
+  'keywords': 'text'
+}, {
+  weights: {
+    name: 10,              // Business name is KING
+    'categories.title': 5, // Categories are important
+    'location.city': 3,    // City matches
+    'location.state': 2,   // State matches
+    'keywords': 4          // Keywords
+  },
+  name: 'search_suggestions_text_index'
+});
+
+// Single field indexes for fast regex queries
+bizSchema.index({ name: 1 });
+bizSchema.index({ 'location.city': 1 });
+bizSchema.index({ 'location.state': 1 });
+bizSchema.index({ 'categories.title': 1 });
+
+// Compound indexes for filtering active businesses
+bizSchema.index({ isArchived: 1, is_closed: 1 });
+bizSchema.index({ subscriptionName: 1, isArchived: 1 });
+
+// Index for sorting by rating and reviews
+bizSchema.index({ rating: -1, review_count: -1 });
 
 module.exports = mongoose.model('Biz', bizSchema);
