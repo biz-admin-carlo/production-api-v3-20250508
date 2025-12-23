@@ -226,7 +226,7 @@ const pickAllowedFields = (p = {}) => {
     isArchivedId: p.isArchivedId,            
     isBizDB: p.isBizDB,
     userID: p.userID,                        
-    bizStatus: p.bizStatus,
+    bizStatus: p.bizStatus,  // ← This field now handles "overdue", "active", "pending"
     paymentStatus: p.paymentStatus,
     subscriptionName: p.subscriptionName,
     paymentGateway: p.paymentGateway,
@@ -248,6 +248,17 @@ async function editBizDetails(req, res, next) {
       return res.status(400).json({ success: false, message: 'bizId is required' });
     }
 
+    // Validate bizStatus values if provided
+    if (body.bizStatus) {
+      const validStatuses = ['pending', 'active', 'overdue', 'suspended', 'cancelled'];
+      if (!validStatuses.includes(body.bizStatus)) {
+        return res.status(400).json({ 
+          success: false, 
+          message: `Invalid bizStatus. Must be one of: ${validStatuses.join(', ')}` 
+        });
+      }
+    }
+
     const updated = await updateBizInMongo(body, {
       actorUserId: req.user?.userId ?? null,
       actorEmail:  req.user?.email  ?? null
@@ -255,6 +266,13 @@ async function editBizDetails(req, res, next) {
 
     if (!updated) {
       return res.status(404).json({ success: false, message: 'Business not found' });
+    }
+
+    // Log status change for audit
+    if (body.bizStatus) {
+      console.log(
+        `Business ${updated.name} (${updated._id}) status changed to ${body.bizStatus} by ${req.user?.email || 'system'}`
+      );
     }
 
     return res.status(200).json({
@@ -280,6 +298,111 @@ async function editBizDetails(req, res, next) {
   }
 }
 
+async function toggleOverdueStatus(req, res, next) {
+  try {
+    const { bizId } = req.params;
+    const { bizStatus } = req.body;
+
+    if (!bizId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'bizId is required' 
+      });
+    }
+
+    if (!bizStatus || !['active', 'overdue'].includes(bizStatus)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'bizStatus must be either "active" or "overdue"' 
+      });
+    }
+
+    // Use existing updateBizInMongo function
+    const updated = await updateBizInMongo(
+      { bizId, bizStatus },
+      {
+        actorUserId: req.user?.userId ?? null,
+        actorEmail: req.user?.email ?? null
+      }
+    );
+
+    if (!updated) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Business not found' 
+      });
+    }
+
+    // Log the change
+    console.log(
+      `Business ${updated.name} (${updated._id}) marked as ${bizStatus.toUpperCase()} by ${req.user?.email || 'system'}`
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: `Business marked as ${bizStatus.toUpperCase()}`,
+      data: {
+        _id: updated._id,
+        name: updated.name,
+        bizStatus: updated.bizStatus,
+        updatedAt: updated.updatedAt
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function bulkUpdateBizStatus(req, res, next) {
+  try {
+    const { bizIds, bizStatus } = req.body;
+
+    if (!Array.isArray(bizIds) || bizIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'bizIds must be a non-empty array'
+      });
+    }
+
+    if (!bizStatus || !['pending', 'active', 'overdue', 'suspended', 'cancelled'].includes(bizStatus)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid bizStatus value'
+      });
+    }
+
+    // Import Biz model
+    const Biz = require('../../models/Biz'); // Adjust path as needed
+
+    // Bulk update
+    const result = await Biz.updateMany(
+      { _id: { $in: bizIds } },
+      { 
+        $set: { 
+          bizStatus,
+          updatedAt: new Date()
+        }
+      }
+    );
+
+    console.log(
+      `Bulk update: ${result.modifiedCount} businesses marked as ${bizStatus.toUpperCase()} by ${req.user?.email || 'system'}`
+    );
+
+    res.status(200).json({
+      success: true,
+      message: `${result.modifiedCount} businesses updated successfully`,
+      data: {
+        matchedCount: result.matchedCount,
+        modifiedCount: result.modifiedCount,
+        bizStatus
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = { 
   getAllUsers, 
   updateAccountType, 
@@ -292,5 +415,7 @@ module.exports = {
   getAllDisputes, 
   getCheckPayment,
   getUpdatedCardDetails,
-  editBizDetails
+  editBizDetails,
+  toggleOverdueStatus,    
+  bulkUpdateBizStatus       
 };
