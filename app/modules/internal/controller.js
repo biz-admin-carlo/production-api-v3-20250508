@@ -16,6 +16,7 @@ const {
 } = require('../../modules/subscribers/service');
 const AppError = require('../../utils/AppError');
 const Customer = require('../../webhooks/CustomerModel');
+const Biz = require('../biz/model');
 
 const getAllUsers = async (req, res, next) => {
   try {
@@ -171,7 +172,6 @@ const getUpdatedCardDetails = async (req, res, next) => {
     let data;
 
     if (userId) {
-      // specific user latest
       data = await getBillingDetails(userId);
       console.log(data);
       if (!data) {
@@ -370,9 +370,6 @@ async function bulkUpdateBizStatus(req, res, next) {
         message: 'Invalid bizStatus value'
       });
     }
-
-    // Import Biz model
-    const Biz = require('../../models/Biz'); // Adjust path as needed
 
     // Bulk update
     const result = await Biz.updateMany(
