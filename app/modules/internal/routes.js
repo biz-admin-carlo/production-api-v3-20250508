@@ -31,8 +31,9 @@ router.delete('/users/', internalMiddleware, deleteUserAccount);
 router.delete('/payment/', internalMiddleware, deletePayment);
 
 router.put('/biz-details/', internalMiddleware, editBizDetails);
-
 // router.get('/updated-card-details/:userId/', internalMiddleware, getUpdatedCardDetails);
+router.patch('/biz/:bizId/status', internalMiddleware, toggleOverdueStatus);
+router.patch('/biz/bulk/status', internalMiddleware, bulkUpdateBizStatus);
 
 router.patch('/biz/:bizId/status', internalMiddleware, toggleOverdueStatus);
 router.patch('/biz/bulk/status', internalMiddleware, bulkUpdateBizStatus);
