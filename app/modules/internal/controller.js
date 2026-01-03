@@ -16,6 +16,7 @@ const {
 } = require('../../modules/subscribers/service');
 const AppError = require('../../utils/AppError');
 const Customer = require('../../webhooks/CustomerModel');
+const Biz = require('../../models/Biz');
 
 const getAllUsers = async (req, res, next) => {
   try {
@@ -298,13 +299,6 @@ async function editBizDetails(req, res, next) {
   }
 }
 
-// ========================================
-// NEW: Quick toggle overdue status
-// ========================================
-/**
- * Toggle business between "overdue" and "active" status
- * This is a convenience endpoint for superadmins to quickly change status
- */
 async function toggleOverdueStatus(req, res, next) {
   try {
     const { bizId } = req.params;
@@ -324,7 +318,6 @@ async function toggleOverdueStatus(req, res, next) {
       });
     }
 
-    // Use existing updateBizInMongo function
     const updated = await updateBizInMongo(
       { bizId, bizStatus },
       {
@@ -340,7 +333,6 @@ async function toggleOverdueStatus(req, res, next) {
       });
     }
 
-    // Log the change
     console.log(
       `Business ${updated.name} (${updated._id}) marked as ${bizStatus.toUpperCase()} by ${req.user?.email || 'system'}`
     );
@@ -360,13 +352,6 @@ async function toggleOverdueStatus(req, res, next) {
   }
 }
 
-// ========================================
-// NEW: Bulk update overdue status
-// ========================================
-/**
- * Bulk update bizStatus for multiple businesses
- * Useful for batch operations
- */
 async function bulkUpdateBizStatus(req, res, next) {
   try {
     const { bizIds, bizStatus } = req.body;
@@ -385,10 +370,6 @@ async function bulkUpdateBizStatus(req, res, next) {
       });
     }
 
-    // Import Biz model
-    const Biz = require('../../models/Biz'); // Adjust path as needed
-
-    // Bulk update
     const result = await Biz.updateMany(
       { _id: { $in: bizIds } },
       { 

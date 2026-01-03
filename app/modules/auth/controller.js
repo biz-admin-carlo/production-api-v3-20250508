@@ -57,7 +57,6 @@ const prisma = require('../../../prisma/client');
 // };
 
 const login = async (req, res, next) => {
-console.log("ASAS")
   try {
     const { email, password } = req.body;
 
