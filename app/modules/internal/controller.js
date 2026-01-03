@@ -172,7 +172,6 @@ const getUpdatedCardDetails = async (req, res, next) => {
     let data;
 
     if (userId) {
-      // specific user latest
       data = await getBillingDetails(userId);
       console.log(data);
       if (!data) {
@@ -318,6 +317,7 @@ async function toggleOverdueStatus(req, res, next) {
       });
     }
 
+    // Use existing updateBizInMongo function
     const updated = await updateBizInMongo(
       { bizId, bizStatus },
       {
@@ -333,6 +333,7 @@ async function toggleOverdueStatus(req, res, next) {
       });
     }
 
+    // Log the change
     console.log(
       `Business ${updated.name} (${updated._id}) marked as ${bizStatus.toUpperCase()} by ${req.user?.email || 'system'}`
     );
@@ -370,6 +371,7 @@ async function bulkUpdateBizStatus(req, res, next) {
       });
     }
 
+    // Bulk update
     const result = await Biz.updateMany(
       { _id: { $in: bizIds } },
       { 
