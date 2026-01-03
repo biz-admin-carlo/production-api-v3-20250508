@@ -12,7 +12,9 @@ const {
   updateAccountType,
   deleteUserAccount,
   getUpdatedCardDetails,
-  editBizDetails
+  editBizDetails,
+  toggleOverdueStatus,      
+  bulkUpdateBizStatus
 } = require('./controller');
 
 const router = express.Router();
@@ -31,5 +33,21 @@ router.delete('/payment/', internalMiddleware, deletePayment);
 router.put('/biz-details/', internalMiddleware, editBizDetails);
 
 // router.get('/updated-card-details/:userId/', internalMiddleware, getUpdatedCardDetails);
+
+/**
+ * @route   PATCH /internal/biz/:bizId/status
+ * @desc    Quick toggle business status (overdue/active)
+ * @access  Private (Superadmin via internalMiddleware)
+ * @body    { bizStatus: "overdue" | "active" }
+ */
+router.patch('/biz/:bizId/status', internalMiddleware, toggleOverdueStatus);
+
+/**
+ * @route   PATCH /internal/biz/bulk/status
+ * @desc    Bulk update business status for multiple businesses
+ * @access  Private (Superadmin via internalMiddleware)
+ * @body    { bizIds: ["id1", "id2"], bizStatus: "overdue" }
+ */
+router.patch('/biz/bulk/status', internalMiddleware, bulkUpdateBizStatus);
 
 module.exports = router;

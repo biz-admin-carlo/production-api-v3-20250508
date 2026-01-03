@@ -11,7 +11,7 @@ const bodyParser = require('body-parser');
 const errorHandler = require('./app/middlewares/errorHandler');
 const { generalLimiter } = require('./app/middlewares/rateLimiter');
 const safeSanitize = require('./app/middlewares/safeSanitize');
-const morganLogger = require('./app/middlewares/morganLogger');
+// const morganLogger = require('./app/middlewares/morganLogger');
 const socketManager = require('./app/utils/socketManager');
 
 dotenv.config();
@@ -30,7 +30,7 @@ app.use(cors({
       callback(new Error("Not allowed by CORS"));
     }
   },
-  methods: 'GET,POST,PUT,DELETE,OPTIONS',
+  methods: 'GET,POST,PUT,DELETE,OPTIONS,PATCH',
   allowedHeaders: [
          'Content-Type',
          'Authorization',
@@ -76,7 +76,7 @@ app.use((req, res, next) => {
   };
   next();
 });
-app.use(morganLogger);
+// app.use(morganLogger);
 
 // ───── API Routes ─────
 app.use('/api/v2', require('./app/router'));
