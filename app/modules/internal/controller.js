@@ -16,7 +16,7 @@ const {
 } = require('../../modules/subscribers/service');
 const AppError = require('../../utils/AppError');
 const Customer = require('../../webhooks/CustomerModel');
-const Biz = require('../../models/Biz');
+const Biz = require('../biz/model');
 
 const getAllUsers = async (req, res, next) => {
   try {
