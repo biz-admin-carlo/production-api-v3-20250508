@@ -9,6 +9,7 @@ const {
   saveBizGallery,
   findSearchSuggestions
 } = require('./service');
+const cacheService = require('../services/cacheService');
 
 const getSearchSuggestions = async (req, res, next) => {
   try {
@@ -157,11 +158,18 @@ const getBizDetails = async (req, res, next) => {
 
 const getFeaturedBiz = async (req, res, next) => {
   try {
-    const featured = await getRecentFeaturedBiz();
+    let featured = cacheService.getFeaturedBiz();
+    
+    if (!featured) {
+      featured = await getRecentFeaturedBiz();
+      cacheService.setFeaturedBiz(featured, 300); 
+    }
+    
     res.status(200).json({
       timestamp: new Date().toISOString(),
       success: true,
-      data: featured
+      data: featured,
+      fromCache: !!featured
     });
   } catch (err) {
     next(err);
@@ -189,6 +197,8 @@ async function createBizDetails(req, res, next) {
       latitude: req.body.latitude || null,
       longitude: req.body.longitude || null
     });
+
+    cacheService.clearAllBizCache();
 
     res.status(201).json({
       success: true,

@@ -25,6 +25,7 @@ const fetchAccountDetails = async (userId) => {
     createdAt: user.createdAt,
     lastModifiedAt: user.lastModifiedAt,
     profileImageUrl: user.profileImageUrl,
+    isActive: user.isActive
   };
 };
 
