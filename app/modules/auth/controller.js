@@ -5,6 +5,8 @@ const {
   createSubscriber
 } = require('./service');
 const prisma = require('../../../prisma/client');
+const User = require('../users/model');
+const bcrypt = require('bcryptjs');
 
 // const login = async (req, res, next) => {
 //   const { loginMeta } = res.locals;
@@ -126,9 +128,65 @@ const registerSubsriber = async (req, res, next) => {
   }
 };
 
+const getSubscriberByEmail = async (req, res, next) => {
+  try {
+    const user = await User.findOne({ email: req.params.email })
+      .select('firstName lastName email userCode birthday isActive createdAt');
+    
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+
+    res.status(200).json({
+      success: true,
+      data: user
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const updateSubscriber = async (req, res, next) => {
+  try {
+    const { firstName, lastName, password, userCode } = req.body;
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+
+    // Update fields
+    if (firstName) user.firstName = firstName;
+    if (lastName) user.lastName = lastName;
+    if (userCode !== undefined) user.userCode = userCode;
+    
+    // Update password if provided
+    if (password) {
+      user.password = await bcrypt.hash(password, 10);
+    }
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Account updated successfully',
+      data: {
+        id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+        userCode: user.userCode
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = { 
   login, 
   forgotPassword, 
   register,
-  registerSubsriber 
+  registerSubsriber,
+  getSubscriberByEmail,
+  updateSubscriber
 };
