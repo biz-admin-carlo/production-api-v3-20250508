@@ -10,6 +10,8 @@ const {
   fetchAllDisputes,
   fetchAllSubscriberBillingDetails,
   updateBizInMongo,
+  getBizStats,
+  fetchAllBizWithPaymentTracking
 } = require('./service');
 const {
   getBillingDetails
@@ -17,6 +19,7 @@ const {
 const AppError = require('../../utils/AppError');
 const Customer = require('../../webhooks/CustomerModel');
 const Biz = require('../biz/model');
+const cacheService = require('../services/cacheService');
 
 const getAllUsers = async (req, res, next) => {
   try {
@@ -104,6 +107,149 @@ const getAllBiz = async (req, res, next) => {
   }
 };
 
+const getAllBizSuper = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    
+    const searchTerm = req.query.search || '';
+    const status = req.query.status || '';
+    const sortBy = req.query.sortBy || 'createdAt';
+    const sortOrder = req.query.sortOrder || 'desc';
+    
+    // Build query params for cache key
+    const queryParams = { page, limit, search: searchTerm, status, sortBy, sortOrder };
+    
+    // ===================================
+    // 1. TRY CACHE FIRST
+    // ===================================
+    const cachedResponse = cacheService.getBizList(queryParams);
+    if (cachedResponse) {
+      return res.status(200).json({
+        ...cachedResponse,
+        fromCache: true,
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    // ===================================
+    // 2. BUILD MATCH CRITERIA
+    // ===================================
+    const matchCriteria = {};
+    if (searchTerm) {
+      matchCriteria.$or = [
+        { name: { $regex: searchTerm, $options: 'i' } },
+        { email: { $regex: searchTerm, $options: 'i' } },
+        { alias: { $regex: searchTerm, $options: 'i' } }
+      ];
+    }
+    if (status) {
+      matchCriteria.bizStatus = status;
+    }
+
+    // ===================================
+    // 3. GET STATS (with cache)
+    // ===================================
+    let stats = cacheService.getBizStats();
+    if (!stats) {
+      stats = await getBizStats();
+      cacheService.setBizStats(stats, 300); // Cache for 5 min
+    }
+    
+    // ===================================
+    // 4. GET TOTAL COUNT
+    // ===================================
+    const totalCount = await Biz.countDocuments(matchCriteria);
+    
+    // ===================================
+    // 5. SMART PAGINATION WITH CACHE
+    // ===================================
+    let businesses;
+    const isFirstFourPages = page <= 4 && !searchTerm && !status;
+    
+    if (isFirstFourPages) {
+      // Try to get first 40 from cache
+      let first40 = cacheService.getFirst40Biz();
+      
+      if (!first40) {
+        // Load and cache first 40
+        console.log('📥 Loading first 40 businesses...');
+        first40 = await fetchAllBizWithPaymentTracking(
+          {},
+          0,
+          40,
+          sortBy,
+          sortOrder === 'asc' ? 1 : -1
+        );
+        cacheService.setFirst40Biz(first40, 300); // Cache for 5 min
+      }
+      
+      // Return slice from cached data
+      const startIdx = (page - 1) * limit;
+      const endIdx = startIdx + limit;
+      businesses = first40.slice(startIdx, endIdx);
+      
+      console.log(`✨ Page ${page} from cached first 40`);
+      
+    } else {
+      // Fetch from database (pages 5+, or with filters)
+      console.log(`🔍 Fetching page ${page} from database...`);
+      businesses = await fetchAllBizWithPaymentTracking(
+        matchCriteria,
+        skip,
+        limit,
+        sortBy,
+        sortOrder === 'asc' ? 1 : -1
+      );
+    }
+    
+    // ===================================
+    // 6. BUILD RESPONSE
+    // ===================================
+    const response = {
+      success: true,
+      stats: {
+        total: stats.total,
+        paid: stats.paid,
+        free: stats.free,
+        overdue: stats.overdue
+      },
+      data: businesses,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalCount / limit),
+        totalItems: totalCount,
+        itemsPerPage: limit,
+        hasNextPage: page < Math.ceil(totalCount / limit),
+        hasPrevPage: page > 1,
+        from: skip + 1,
+        to: Math.min(skip + limit, totalCount)
+      },
+      fromCache: false,
+      timestamp: new Date().toISOString()
+    };
+    
+    // ===================================
+    // 7. CACHE THE RESPONSE
+    // ===================================
+    cacheService.setBizList(queryParams, response, 300); // 5 minutes
+    
+    return res.status(200).json(response);
+    
+  } catch (error) {
+    console.error('❌ getAllBizSuper error:', error);
+    return res.status(500).json({ 
+      success: false,
+      message: error.message 
+    });
+  }
+};
+
+const clearBizCache = () => {
+  cacheService.clearAllBizCache();
+};
+
 const getAllPayments = async (req, res, next) => {
   try {
     const payments = await fetchAllPayments();
@@ -137,6 +283,9 @@ const deletePayment = async (req, res, next) => {
     if (!paymentId) throw new AppError('paymentId is required', 400);
 
     const result = await deletePaymentById(paymentId);
+
+    cacheService.clearAllBizCache(); // Use shared cache
+    
     res.status(200).json({
       success: true,
       message: 'Payment record deleted',
@@ -248,15 +397,12 @@ async function editBizDetails(req, res, next) {
       return res.status(400).json({ success: false, message: 'bizId is required' });
     }
 
-    // Validate bizStatus values if provided
-    if (body.bizStatus) {
-      const validStatuses = ['pending', 'active', 'overdue', 'suspended', 'cancelled'];
-      if (!validStatuses.includes(body.bizStatus)) {
-        return res.status(400).json({ 
-          success: false, 
-          message: `Invalid bizStatus. Must be one of: ${validStatuses.join(', ')}` 
-        });
-      }
+    const validStatuses = ['pending', 'active', 'overdue', 'suspended', 'cancelled'];
+    if (body.bizStatus && !validStatuses.includes(body.bizStatus)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Invalid bizStatus. Must be one of: ${validStatuses.join(', ')}` 
+      });
     }
 
     const updated = await updateBizInMongo(body, {
@@ -268,12 +414,13 @@ async function editBizDetails(req, res, next) {
       return res.status(404).json({ success: false, message: 'Business not found' });
     }
 
-    // Log status change for audit
     if (body.bizStatus) {
       console.log(
         `Business ${updated.name} (${updated._id}) status changed to ${body.bizStatus} by ${req.user?.email || 'system'}`
       );
     }
+    
+    cacheService.clearAllBizCache(); // Use shared cache
 
     return res.status(200).json({
       success: true,
@@ -297,6 +444,7 @@ async function editBizDetails(req, res, next) {
     next(err);
   }
 }
+
 
 async function toggleOverdueStatus(req, res, next) {
   try {
@@ -414,5 +562,7 @@ module.exports = {
   getUpdatedCardDetails,
   editBizDetails,
   toggleOverdueStatus,    
-  bulkUpdateBizStatus       
+  bulkUpdateBizStatus,
+  getAllBizSuper,
+  clearBizCache   
 };
