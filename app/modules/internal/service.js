@@ -57,6 +57,174 @@ const fetchAllBiz = async () => {
   return await Biz.find({}).sort({ createdAt: -1 }).lean();
 };
 
+const getBizStats = async () => {
+  const monthStart = Math.floor(
+    new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime() / 1000
+  );
+
+  const stats = await Biz.aggregate([
+    // Count ALL businesses (no pagination)
+    {
+      $facet: {
+        // Total count
+        total: [
+          { $count: 'count' }
+        ],
+        
+        // Paid services count
+        paid: [
+          {
+            $lookup: {
+              from: 'customers',
+              let: { email: '$email' },
+              pipeline: [
+                { $match: { $expr: { $eq: ['$email', '$$email'] } } },
+                { $unwind: '$paymentDetails' },
+                {
+                  $match: {
+                    $expr: {
+                      $gte: ['$paymentDetails.createdTimestamp', monthStart]
+                    }
+                  }
+                },
+                { $limit: 1 }
+              ],
+              as: 'payments'
+            }
+          },
+          { $match: { 'payments.0': { $exists: true } } },
+          { $count: 'count' }
+        ],
+        
+        // Free listings count (no payment this month)
+        free: [
+          {
+            $lookup: {
+              from: 'customers',
+              let: { email: '$email' },
+              pipeline: [
+                { $match: { $expr: { $eq: ['$email', '$$email'] } } },
+                { $unwind: '$paymentDetails' },
+                {
+                  $match: {
+                    $expr: {
+                      $gte: ['$paymentDetails.createdTimestamp', monthStart]
+                    }
+                  }
+                },
+                { $limit: 1 }
+              ],
+              as: 'payments'
+            }
+          },
+          { $match: { 'payments.0': { $exists: false } } },
+          { $count: 'count' }
+        ],
+        
+        // Overdue count
+        overdue: [
+          { $match: { bizStatus: 'overdue' } },
+          { $count: 'count' }
+        ]
+      }
+    }
+  ]);
+
+  const result = stats[0];
+  
+  return {
+    total: result.total[0]?.count || 0,
+    paid: result.paid[0]?.count || 0,
+    free: result.free[0]?.count || 0,
+    overdue: result.overdue[0]?.count || 0
+  };
+};
+
+const fetchAllBizWithPaymentTracking = async (
+  matchCriteria = {},
+  skip = 0,
+  limit = 10,
+  sortBy = 'createdAt',
+  sortOrder = -1
+) => {
+  const monthStart = Math.floor(
+    new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime() / 1000
+  );
+
+  const sortObj = {};
+  sortObj[sortBy] = sortOrder;
+
+  return Biz.aggregate([
+    // 1. Filter first (if any match criteria)
+    ...(Object.keys(matchCriteria).length > 0 ? [{ $match: matchCriteria }] : []),
+    
+    // 2. Sort
+    { $sort: sortObj },
+    
+    // 3. Pagination
+    { $skip: skip },
+    { $limit: limit },
+
+    // 4. Lookup user registration
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'email',
+        foreignField: 'email',
+        as: 'matchedUsers',
+      },
+    },
+
+    // 5. Lookup payments
+    {
+      $lookup: {
+        from: 'customers',
+        let: { email: '$email' },
+        pipeline: [
+          { $match: { $expr: { $eq: ['$email', '$$email'] } } },
+          { $unwind: '$paymentDetails' },
+          {
+            $match: {
+              $expr: {
+                $gte: ['$paymentDetails.createdTimestamp', monthStart],
+              },
+            },
+          },
+          {
+            $project: {
+              _id: 0,
+              paidAtSec: '$paymentDetails.createdTimestamp',
+            },
+          },
+        ],
+        as: 'paymentsThisMonth',
+      },
+    },
+
+    // 6. Add computed fields
+    {
+      $addFields: {
+        isRegistered: { $gt: [{ $size: '$matchedUsers' }, 0] },
+        isPaidThisMonth: { $gt: [{ $size: '$paymentsThisMonth' }, 0] },
+        lastPaidAt: {
+          $cond: [
+            { $gt: [{ $size: '$paymentsThisMonth' }, 0] },
+            {
+              $toDate: {
+                $multiply: [{ $max: '$paymentsThisMonth.paidAtSec' }, 1000],
+              },
+            },
+            null,
+          ],
+        },
+      },
+    },
+
+    // 7. Clean up
+    { $project: { matchedUsers: 0, paymentsThisMonth: 0 } },
+  ]);
+};
+
 const fetchAllPayments = async () => {
   return await Customer.find().sort({ createdAt: -1 }).lean();
 };
@@ -274,6 +442,7 @@ module.exports = {
   fetchUserById, 
   fetchAllBiz, 
   fetchAllTransactions, 
+  getBizStats,
   fetchAllTransactionsWithUserCheck,
   fetchAllTransactionsWithUserAndPayment,
   fetchAllPayments, 
@@ -282,5 +451,6 @@ module.exports = {
   fetchLatestSubscriberBillingDetails,
   fetchAllSubscriberBillingDetails,
   fetchAllLatestSubscriberBillingDetailsPerUser,
-  updateBizInMongo
+  updateBizInMongo,
+  fetchAllBizWithPaymentTracking
 };

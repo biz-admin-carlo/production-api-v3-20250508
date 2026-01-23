@@ -14,14 +14,15 @@ const {
   getUpdatedCardDetails,
   editBizDetails,
   toggleOverdueStatus,      
-  bulkUpdateBizStatus
+  bulkUpdateBizStatus,
+  getAllBizSuper
 } = require('./controller');
 
 const router = express.Router();
 
 router.get('/users/', internalMiddleware, getAllUsers);
 router.get('/fetch-user/:userID/', internalMiddleware, getUserById);
-router.get('/fetch-biz/', internalMiddleware, getAllBiz);
+router.get('/fetch-biz/', internalMiddleware, getAllBizSuper);
 router.get('/fetch-transactions/', internalMiddleware, getAllTransactions);
 router.get('/fetch-payments/', internalMiddleware, getAllPayments);
 router.get('/fetch-disputes/', internalMiddleware, getAllDisputes);
