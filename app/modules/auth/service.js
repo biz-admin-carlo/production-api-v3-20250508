@@ -230,6 +230,7 @@ const createUser = async (data) => {
     `;
     await sendMail({
       to: ['WebDev@bizsolutions.us'],
+      cc: ['Info@bizsolutions.us'],
       bcc: adminEmails,
       subject: '🔔 New user registration',
       html: adminHtml
@@ -310,6 +311,7 @@ const createSubscriber = async (data) => {
     `;
     await sendMail({
       to: ['WebDev@bizsolutions.us'],
+      cc: ['Info@bizsolutions.us'],
       bcc: adminEmails,
       subject: '🔔 New user registration',
       html: adminHtml
