@@ -675,6 +675,8 @@ const findBizById = async (bizId) => {
   return mongoMatch;
 };
 
+const FEATURED_FALLBACK_LIMIT = 20;
+
 const getRecentFeaturedBiz = async () => {
   try {
     const fourWeeksAgo = new Date();
@@ -688,7 +690,18 @@ const getRecentFeaturedBiz = async () => {
       .sort({ createdAt: -1 })
       .lean();
 
-    return businesses;
+    if (businesses.length) return businesses;
+
+    // Nothing created in the last 4 weeks — fall back to the most recent
+    // businesses with an active subscription so this endpoint never
+    // returns an empty result while there's a paying subscriber to show.
+    return await Biz.find({
+      isArchived: false,
+      paymentStatus: 'active'
+    })
+      .sort({ createdAt: -1 })
+      .limit(FEATURED_FALLBACK_LIMIT)
+      .lean();
   } catch (err) {
     console.error('❌ Error fetching featured businesses:', err);
     throw err;
