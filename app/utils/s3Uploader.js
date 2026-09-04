@@ -50,8 +50,15 @@ const s3Storage = multerS3({
           fileName = `${safeBizName}_gallery_${index}${ext}`;
         } else if (routePath.includes("upload-new-icon")) {
           folder   = "users/profile/";
-          
-          fileName = `${uuid}${ext}`;        
+
+          fileName = `${uuid}${ext}`;
+        } else if (routePath.endsWith("/images")) {
+          // Matches the review-images upload route (/:bizId/images) — like the
+          // other branches above, this checks the path relative to this
+          // route's own router, since Express strips the mount prefix
+          // (e.g. "/reviews") before handlers on that sub-router see req.path.
+          folder = "reviews/images/";
+          fileName = `${uuid}${ext}`;
         }
       
         cb(null, `${folder}${fileName}`);
@@ -65,9 +72,11 @@ const transformS3UrlToCDN = (url) => {
 
 const uploadSingle = multer({ storage: s3Storage }).single("image");
 const uploadMultiple = multer({ storage: s3Storage }).array("images", 50);
+const uploadReviewImages = multer({ storage: s3Storage }).array("images", 3);
 
 module.exports = {
   uploadSingle,
   uploadMultiple,
+  uploadReviewImages,
   transformS3UrlToCDN,
 };
