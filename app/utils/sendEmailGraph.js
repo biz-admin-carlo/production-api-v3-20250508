@@ -382,6 +382,62 @@ function getAdminTerminationNotificationHtml({ fullName, email, userId, reason, 
   return emailShell({ title: 'Account Termination Request', bodyHtml });
 }
 
+function maskCommentPreview(text) {
+  if (!text || !text.trim()) return '';
+
+  const words = text.trim().split(/\s+/);
+  const [firstWord, ...rest] = words;
+  const cappedRest = rest.slice(0, 12);
+  const maskedRest = cappedRest.map((w) => '*'.repeat(Math.min(w.length, 8)));
+  const suffix = rest.length > cappedRest.length ? ' …' : '';
+
+  return [firstWord, ...maskedRest].join(' ') + suffix;
+}
+
+function getNewReviewNotificationHtml({ bizName, reviewerName, rating, comment, isVerified, portalLink }) {
+  const safeRating = Math.max(1, Math.min(5, Number(rating) || 0));
+  const stars = '⭐'.repeat(safeRating) + '☆'.repeat(5 - safeRating);
+  const maskedComment = maskCommentPreview(comment);
+  const verifiedBadge = isVerified
+    ? '<span style="background:#16a34a;color:#fff;font-size:11px;padding:2px 8px;border-radius:12px;margin-left:8px;">VERIFIED</span>'
+    : '';
+
+  return `
+    <div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto;background:#0b0b0f;color:#f4f4f5;border:1px solid #27272a;padding:32px;">
+      <div style="text-align:center;margin-bottom:24px;">
+        <img src="${logoUrl}" alt="MyBizSolutions" style="height:48px;filter:grayscale(1) brightness(2);" />
+      </div>
+      <p style="text-align:center;letter-spacing:2px;font-size:12px;color:#f97316;text-transform:uppercase;margin-bottom:8px;">
+        Someone's talking about your business...
+      </p>
+      <h2 style="text-align:center;font-size:24px;margin:0 0 16px;color:#fff;">A New Review Has Arrived</h2>
+      <p style="text-align:center;color:#a1a1aa;">
+        <strong style="color:#fff;">${bizName}</strong> just received a new review.
+      </p>
+      <div style="background:#18181b;border:1px solid #27272a;border-radius:8px;padding:20px;margin:24px 0;">
+        <p style="margin:0 0 8px;font-size:22px;letter-spacing:2px;">${stars}</p>
+        <p style="margin:0 0 4px;font-weight:bold;">${reviewerName || 'Anonymous'}${verifiedBadge}</p>
+        <p style="margin:12px 0 0;color:#d4d4d8;font-family:'Courier New',monospace;letter-spacing:1px;">&ldquo;${maskedComment}&rdquo;</p>
+      </div>
+      <div style="text-align:center;margin:28px 0;">
+        <a href="${portalLink}"
+           style="background:#f97316;color:#000;padding:14px 28px;text-decoration:none;
+                  border-radius:6px;font-weight:bold;display:inline-block;">
+          CHECK IT OUT &rarr;
+        </a>
+      </div>
+      <p style="text-align:center;font-size:12px;color:#71717a;">
+        Log in to reveal and read the full review.
+      </p>
+      <hr style="border:none;border-top:1px solid #27272a;margin:32px 0;" />
+      <footer style="font-size:12px;color:#52525b;text-align:center;">
+        <p>This is a system-generated e-mail. Please do not reply.</p>
+        <p>&copy; ${new Date().getFullYear()} BizSolutions LLC.</p>
+      </footer>
+    </div>
+  `;
+}
+
 module.exports = {
   sendMail,
   getPaymentSuccessHtml,
@@ -392,5 +448,6 @@ module.exports = {
   getUserPlanChangeEmailHtml,
   getAdminPlanChangeNotificationHtml,
   getUserTerminationEmailHtml,
-  getAdminTerminationNotificationHtml
+  getAdminTerminationNotificationHtml,
+  getNewReviewNotificationHtml
 };

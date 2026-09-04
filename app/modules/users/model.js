@@ -20,7 +20,17 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: [true, 'Password is required.']
+    required: [function () { return !this.googleId; }, 'Password is required.']
+  },
+  contactNumber: {
+    type: String,
+    default: null
+  },
+  googleId: {
+    type: String,
+    default: null,
+    unique: true,
+    sparse: true
   },
   isActive: {
     type: Boolean,

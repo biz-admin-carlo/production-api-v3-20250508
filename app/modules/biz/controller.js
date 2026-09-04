@@ -159,17 +159,18 @@ const getBizDetails = async (req, res, next) => {
 const getFeaturedBiz = async (req, res, next) => {
   try {
     let featured = cacheService.getFeaturedBiz();
-    
+    const fromCache = !!featured;
+
     if (!featured) {
       featured = await getRecentFeaturedBiz();
-      cacheService.setFeaturedBiz(featured, 300); 
+      cacheService.setFeaturedBiz(featured, 300);
     }
-    
+
     res.status(200).json({
       timestamp: new Date().toISOString(),
       success: true,
       data: featured,
-      fromCache: !!featured
+      fromCache
     });
   } catch (err) {
     next(err);
