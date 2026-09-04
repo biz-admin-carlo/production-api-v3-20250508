@@ -3,13 +3,34 @@ const Review = require('./model');
 const Biz = require('../biz/model');
 const User = require('../users/model');
 const AppError = require('../../utils/AppError');
+const { sendMail, getNewReviewNotificationHtml } = require('../../utils/sendEmailGraph');
+
+const notifyBizOwnerOfNewReview = async (review, biz) => {
+  if (!biz.userID) return;
+
+  const owner = await User.findById(biz.userID).select('email').lean();
+  if (!owner?.email) return;
+
+  await sendMail({
+    to: [owner.email],
+    subject: `New Review for ${biz.name}`,
+    html: getNewReviewNotificationHtml({
+      bizName: biz.name,
+      reviewerName: review.reviewerName,
+      rating: review.rating,
+      comment: review.comment,
+      isVerified: review.isVerified,
+      portalLink: 'https://mybizsolutions.us/login'
+    })
+  });
+};
 
 const createReview = async ({ bizId, rating, comment, reviewerName, ipHash, userId, images, clientLocation }) => {
   if (!mongoose.Types.ObjectId.isValid(bizId)) {
     throw new AppError('Invalid business id', 400);
   }
 
-  const biz = await Biz.findById(bizId).select('_id').lean();
+  const biz = await Biz.findById(bizId).select('_id name userID').lean();
   if (!biz) {
     throw new AppError('Business not found', 404);
   }
@@ -87,6 +108,11 @@ const createReview = async ({ bizId, rating, comment, reviewerName, ipHash, user
   });
 
   await review.save();
+
+  notifyBizOwnerOfNewReview(review, biz).catch((err) => {
+    console.error('❌ Failed to send new review notification email:', err);
+  });
+
   return review;
 };
 
