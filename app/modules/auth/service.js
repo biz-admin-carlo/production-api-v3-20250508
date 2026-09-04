@@ -1,3 +1,4 @@
+const { OAuth2Client } = require('google-auth-library');
 const User = require('../users/model');
 const Biz = require('../biz/model');
 const bcrypt = require('bcryptjs');
@@ -6,15 +7,9 @@ const { sendMail, getWelcomeEmailHtml, getWelcomeSubscriberEmailHtml } = require
 const { generateRandomPassword } = require('../../utils/generatePassword');
 const AppError = require('../../utils/AppError');
 
-const loginUser = async ({ email, password }) => {
-  const user = await User.findOne({ email });
-  if (!user) throw new Error('Invalid email or password');
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-  const isMatch = await bcrypt.compare(password, user.password);
-  if (!isMatch) throw new Error('Invalid email or password');
-
-  if (!user.isActive) throw new Error('Account is inactive');
-
+const buildAuthTokens = async (user) => {
   let bizId = null;
   let bizName = null;
 
@@ -53,6 +48,78 @@ const loginUser = async ({ email, password }) => {
       bizName
     }
   };
+};
+
+const loginUser = async ({ email, password }) => {
+  const user = await User.findOne({ email });
+  if (!user) throw new Error('Invalid email or password');
+
+  if (!user.password) throw new Error('This account uses Google Sign-In. Please log in with Google.');
+
+  const isMatch = await bcrypt.compare(password, user.password);
+  if (!isMatch) throw new Error('Invalid email or password');
+
+  if (!user.isActive) throw new Error('Account is inactive');
+
+  return buildAuthTokens(user);
+};
+
+const loginWithGoogle = async ({ idToken }) => {
+  if (!idToken) {
+    throw new AppError('idToken is required', 400);
+  }
+
+  let payload;
+  try {
+    const ticket = await googleClient.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_CLIENT_ID
+    });
+    payload = ticket.getPayload();
+  } catch (err) {
+    throw new AppError('Invalid Google token', 401);
+  }
+
+  if (!payload.email_verified) {
+    throw new AppError('Google account email is not verified', 400);
+  }
+
+  const email = payload.email.toLowerCase();
+
+  let user = await User.findOne({ googleId: payload.sub });
+
+  if (!user) {
+    user = await User.findOne({ email });
+
+    if (user) {
+      if (!user.googleId) {
+        user.googleId = payload.sub;
+        await user.save();
+      }
+    } else {
+      const firstName = payload.given_name || (payload.name ? payload.name.split(' ')[0] : 'Google');
+      const lastName = payload.family_name || (payload.name ? payload.name.split(' ').slice(1).join(' ') : 'User') || 'User';
+      const today = new Date();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      const referralCode = `${firstName.toUpperCase()}-BIZ-${month}-${day}`;
+
+      user = new User({
+        firstName,
+        lastName,
+        email,
+        googleId: payload.sub,
+        userCode: '11',
+        isActive: true,
+        referralCode
+      });
+      await user.save();
+    }
+  }
+
+  if (!user.isActive) throw new AppError('Account is inactive', 403);
+
+  return buildAuthTokens(user);
 };
 
 const handleForgotPassword = async (email) => {
@@ -260,9 +327,10 @@ const createSubscriber = async (data) => {
   };
 };
 
-module.exports = { 
-  loginUser, 
-  handleForgotPassword, 
+module.exports = {
+  loginUser,
+  loginWithGoogle,
+  handleForgotPassword,
   createUser,
   createSubscriber,
 };
