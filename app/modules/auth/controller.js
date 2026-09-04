@@ -1,12 +1,14 @@
-const { 
-  loginUser, 
-  handleForgotPassword, 
+const {
+  loginUser,
+  loginWithGoogle,
+  handleForgotPassword,
   createUser,
   createSubscriber
 } = require('./service');
 const prisma = require('../../../prisma/client');
 const User = require('../users/model');
 const bcrypt = require('bcryptjs');
+const AppError = require('../../utils/AppError');
 
 // const login = async (req, res, next) => {
 //   const { loginMeta } = res.locals;
@@ -78,6 +80,22 @@ const login = async (req, res, next) => {
   } catch (err) {
     console.error('❌ Login failed:', err.message);
     return res.status(403).json({ success: false, message: err.message });
+  }
+};
+
+const googleLogin = async (req, res, next) => {
+  try {
+    const { idToken } = req.body;
+
+    if (!idToken) {
+      return res.status(400).json({ success: false, message: 'idToken is required' });
+    }
+
+    const data = await loginWithGoogle({ idToken });
+
+    return res.status(200).json({ success: true, data });
+  } catch (err) {
+    next(err);
   }
 };
 
@@ -182,9 +200,10 @@ const updateSubscriber = async (req, res, next) => {
   }
 };
 
-module.exports = { 
-  login, 
-  forgotPassword, 
+module.exports = {
+  login,
+  googleLogin,
+  forgotPassword,
   register,
   registerSubsriber,
   getSubscriberByEmail,
