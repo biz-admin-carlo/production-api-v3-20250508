@@ -20,6 +20,7 @@ const fetchAccountDetails = async (userId) => {
     lastName: user.lastName,
     email: user.email,
     birthday: user.birthday,
+    contactNumber: user.contactNumber,
     userCode: user.userCode,
     referralCode: user.referralCode,
     createdAt: user.createdAt,
