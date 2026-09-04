@@ -675,6 +675,7 @@ const findBizById = async (bizId) => {
   return mongoMatch;
 };
 
+const FEATURED_MIN_COUNT = 3;
 const FEATURED_FALLBACK_LIMIT = 20;
 
 const getRecentFeaturedBiz = async () => {
@@ -690,18 +691,22 @@ const getRecentFeaturedBiz = async () => {
       .sort({ createdAt: -1 })
       .lean();
 
-    if (businesses.length) return businesses;
+    if (businesses.length >= FEATURED_MIN_COUNT) return businesses;
 
-    // Nothing created in the last 4 weeks — fall back to the most recent
-    // businesses with an active subscription so this endpoint never
-    // returns an empty result while there's a paying subscriber to show.
-    return await Biz.find({
+    // Fewer than FEATURED_MIN_COUNT created in the last 4 weeks — pad out
+    // with the most recent businesses with a paid subscription (not
+    // already included) so this endpoint always has a decent list to show.
+    const excludeIds = businesses.map((b) => b._id);
+    const fallback = await Biz.find({
       isArchived: false,
-      paymentStatus: 'active'
+      paymentStatus: { $in: ['active', 'completed'] },
+      _id: { $nin: excludeIds }
     })
       .sort({ createdAt: -1 })
-      .limit(FEATURED_FALLBACK_LIMIT)
+      .limit(FEATURED_FALLBACK_LIMIT - businesses.length)
       .lean();
+
+    return [...businesses, ...fallback];
   } catch (err) {
     console.error('❌ Error fetching featured businesses:', err);
     throw err;
