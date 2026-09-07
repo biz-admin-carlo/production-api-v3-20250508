@@ -1,5 +1,6 @@
 node_modules
 .env
+.DS_Store
 /app/generated/prisma
 /keys/private.key
 /keys/public.key
