@@ -3,6 +3,7 @@ const internalMiddleware = require('../../middlewares/internalMiddleware');
 const {
   getAllUsers,
   getUserById,
+  getBizById,
   getAllBiz,
   getAllTransactions,
   getAllPayments,
@@ -23,6 +24,7 @@ const router = express.Router();
 router.get('/users/', internalMiddleware, getAllUsers);
 router.get('/fetch-user/:userID/', internalMiddleware, getUserById);
 router.get('/fetch-biz/', internalMiddleware, getAllBizSuper);
+router.get('/biz/:bizId', internalMiddleware, getBizById);
 router.get('/fetch-transactions/', internalMiddleware, getAllTransactions);
 router.get('/fetch-payments/', internalMiddleware, getAllPayments);
 router.get('/fetch-disputes/', internalMiddleware, getAllDisputes);

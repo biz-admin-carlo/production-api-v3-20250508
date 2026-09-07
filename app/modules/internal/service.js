@@ -57,6 +57,10 @@ const fetchAllBiz = async () => {
   return await Biz.find({}).sort({ createdAt: -1 }).lean();
 };
 
+const fetchBizById = async (bizId) => {
+  return await Biz.findById(bizId).select('name').lean();
+};
+
 const getBizStats = async () => {
   const monthStart = Math.floor(
     new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime() / 1000
@@ -439,9 +443,10 @@ module.exports = {
   fetchAllUsers, 
   updateUserCode, 
   deactivateUser, 
-  fetchUserById, 
-  fetchAllBiz, 
-  fetchAllTransactions, 
+  fetchUserById,
+  fetchAllBiz,
+  fetchBizById,
+  fetchAllTransactions,
   getBizStats,
   fetchAllTransactionsWithUserCheck,
   fetchAllTransactionsWithUserAndPayment,

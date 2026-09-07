@@ -2,8 +2,9 @@ const {
   fetchAllUsers, 
   updateUserCode, 
   deactivateUser, 
-  fetchUserById, 
+  fetchUserById,
   fetchAllBiz,
+  fetchBizById,
   fetchAllTransactionsWithUserAndPayment,
   fetchAllPayments, 
   deletePaymentById, 
@@ -87,6 +88,24 @@ const getUserById = async (req, res, next) => {
     res.status(200).json({
       success: true,
       data: user,
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getBizById = async (req, res, next) => {
+  try {
+    const { bizId } = req.params;
+    const biz = await fetchBizById(bizId);
+    if (!biz) {
+      return res.status(404).json({ success: false, message: 'Business not found' });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: { id: biz._id, name: biz.name },
       timestamp: new Date().toISOString()
     });
   } catch (err) {
@@ -552,8 +571,9 @@ module.exports = {
   getAllUsers, 
   updateAccountType, 
   deleteUserAccount, 
-  getUserById, 
-  getAllBiz, 
+  getUserById,
+  getBizById,
+  getAllBiz,
   getAllTransactions, 
   getAllPayments, 
   deletePayment, 
